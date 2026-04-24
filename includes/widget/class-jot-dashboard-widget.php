@@ -230,26 +230,53 @@ class Jot_Dashboard_Widget {
 	}
 
 	private function render_debug_panel( int $user_id ): void {
-		if ( ! current_user_can( 'manage_options' ) || ! class_exists( 'Jot_Ai' ) ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
-		$debug = jot_get_user_array( $user_id, Jot_Ai::DEBUG_META );
-		if ( empty( $debug ) ) {
+		$debug   = class_exists( 'Jot_Ai' ) ? jot_get_user_array( $user_id, Jot_Ai::DEBUG_META ) : array();
+		$digests = jot_get_user_array( $user_id, Jot_Cron::USER_DIGESTS_META );
+		if ( empty( $debug ) && empty( $digests ) ) {
 			return;
 		}
 		?>
 		<details class="jot-widget__debug">
-			<summary><?php esc_html_e( 'AI debug (admin only)', 'jot' ); ?></summary>
-			<p class="jot-widget__muted">
-				<?php if ( ! empty( $debug['error'] ) ) : ?>
-					<strong><?php esc_html_e( 'Error:', 'jot' ); ?></strong>
-					<?php echo esc_html( (string) $debug['error'] ); ?>
-				<?php else : ?>
-					<strong><?php esc_html_e( 'Last raw response:', 'jot' ); ?></strong>
+			<summary><?php esc_html_e( 'Jot debug (admin only)', 'jot' ); ?></summary>
+
+			<?php if ( ! empty( $digests ) ) : ?>
+				<p class="jot-widget__muted">
+					<strong><?php esc_html_e( 'Digests sent to AI:', 'jot' ); ?></strong>
+					<?php
+					$ids = array_map( static fn ( array $d ): string => (string) ( $d['service'] ?? '' ), $digests );
+					echo esc_html( implode( ', ', array_filter( $ids ) ) );
+					?>
+				</p>
+				<ul class="jot-widget__debug-digests">
+					<?php foreach ( $digests as $digest ) : ?>
+						<li>
+							<code><?php echo esc_html( (string) ( $digest['service'] ?? '?' ) ); ?></code>
+							— <?php echo esc_html( (string) ( $digest['digest'] ?? '' ) ); ?>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			<?php else : ?>
+				<p class="jot-widget__muted">
+					<strong><?php esc_html_e( 'No digests stored.', 'jot' ); ?></strong>
+					<?php esc_html_e( 'Either no services are connected, or every connected service returned zero events for the current window.', 'jot' ); ?>
+				</p>
+			<?php endif; ?>
+
+			<?php if ( ! empty( $debug ) ) : ?>
+				<p class="jot-widget__muted">
+					<?php if ( ! empty( $debug['error'] ) ) : ?>
+						<strong><?php esc_html_e( 'AI error:', 'jot' ); ?></strong>
+						<?php echo esc_html( (string) $debug['error'] ); ?>
+					<?php else : ?>
+						<strong><?php esc_html_e( 'Last raw AI response:', 'jot' ); ?></strong>
+					<?php endif; ?>
+				</p>
+				<?php if ( ! empty( $debug['raw'] ) ) : ?>
+					<pre class="jot-widget__debug-pre"><?php echo esc_html( (string) $debug['raw'] ); ?></pre>
 				<?php endif; ?>
-			</p>
-			<?php if ( ! empty( $debug['raw'] ) ) : ?>
-				<pre class="jot-widget__debug-pre"><?php echo esc_html( (string) $debug['raw'] ); ?></pre>
 			<?php endif; ?>
 		</details>
 		<?php
