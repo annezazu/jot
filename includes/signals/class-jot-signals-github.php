@@ -67,8 +67,8 @@ class Jot_Signals_Github {
 
 		$parts = array();
 		if ( $top_stats['commits'] > 0 ) {
-			/* translators: 1: commit count, 2: day count, 3: repo name */
 			$parts[] = sprintf(
+				/* translators: 1: commit count, 2: day count, 3: repo name. */
 				_n(
 					'%1$d commit across %2$d day to %3$s',
 					'%1$d commits across %2$d days to %3$s',
@@ -82,12 +82,14 @@ class Jot_Signals_Github {
 		}
 		if ( $top_stats['prs'] > 0 ) {
 			$parts[] = sprintf(
+				/* translators: %d: pull request count. */
 				_n( '%d pull request', '%d pull requests', $top_stats['prs'], 'jot' ),
 				$top_stats['prs']
 			);
 		}
 		if ( $top_stats['stars'] > 0 ) {
 			$parts[] = sprintf(
+				/* translators: %d: starred repo count. */
 				_n( '%d starred repo', '%d starred repos', $top_stats['stars'], 'jot' ),
 				$top_stats['stars']
 			);

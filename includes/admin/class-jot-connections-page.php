@@ -171,24 +171,34 @@ class Jot_Connections_Page {
 									</form>
 								<?php else : ?>
 									<?php
-									$connect_url = wp_nonce_url(
-										add_query_arg(
-											array(
-												'page'             => self::MENU_SLUG,
-												'jot_oauth_start'  => $id,
+									if ( ! $configured ) : ?>
+										<button
+											type="button"
+											class="button"
+											disabled
+											aria-describedby="jot-connect-hint-<?php echo esc_attr( $id ); ?>"
+										>
+											<?php esc_html_e( 'Connect', 'jot' ); ?>
+										</button>
+										<span id="jot-connect-hint-<?php echo esc_attr( $id ); ?>" class="screen-reader-text">
+											<?php esc_html_e( 'An administrator must configure the OAuth app credentials first.', 'jot' ); ?>
+										</span>
+									<?php else :
+										$connect_url = wp_nonce_url(
+											add_query_arg(
+												array(
+													'page'            => self::MENU_SLUG,
+													'jot_oauth_start' => $id,
+												),
+												admin_url( 'admin.php' )
 											),
-											admin_url( 'admin.php' )
-										),
-										'jot-connect-' . $id
-									);
-									?>
-									<a
-										class="button button-primary"
-										href="<?php echo esc_url( $connect_url ); ?>"
-										<?php if ( ! $configured ) echo 'aria-disabled="true" style="pointer-events:none;opacity:.5"'; ?>
-									>
-										<?php esc_html_e( 'Connect', 'jot' ); ?>
-									</a>
+											'jot-connect-' . $id
+										);
+										?>
+										<a class="button button-primary" href="<?php echo esc_url( $connect_url ); ?>">
+											<?php esc_html_e( 'Connect', 'jot' ); ?>
+										</a>
+									<?php endif; ?>
 								<?php endif; ?>
 							</td>
 						</tr>
