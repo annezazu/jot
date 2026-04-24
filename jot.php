@@ -135,7 +135,7 @@ function jot_services(): array {
 		return $services;
 	}
 	$services = array();
-	foreach ( array( 'Jot_Service_Github' ) as $class ) {
+	foreach ( array( 'Jot_Service_Github', 'Jot_Service_Strava' ) as $class ) {
 		if ( class_exists( $class ) ) {
 			/** @var Jot_Service $instance */
 			$instance                   = new $class();

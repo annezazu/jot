@@ -107,6 +107,14 @@ abstract class Jot_Service_OAuth2 extends Jot_Service {
 		}
 
 		$meta = $this->fetch_connection_meta( (string) $body['access_token'] );
+		if ( ! empty( $body['refresh_token'] ) ) {
+			$meta['refresh_token'] = (string) $body['refresh_token'];
+		}
+		if ( ! empty( $body['expires_at'] ) ) {
+			$meta['expires_at'] = (int) $body['expires_at'];
+		} elseif ( ! empty( $body['expires_in'] ) ) {
+			$meta['expires_at'] = time() + (int) $body['expires_in'];
+		}
 		$this->store_token( get_current_user_id(), (string) $body['access_token'], $meta );
 
 		wp_safe_redirect( add_query_arg( 'connected', $this->id(), admin_url( 'admin.php?page=jot-connections' ) ) );
@@ -145,6 +153,15 @@ abstract class Jot_Service_OAuth2 extends Jot_Service {
 			return new WP_Error( 'jot_not_connected', __( 'Not connected.', 'jot' ) );
 		}
 
+		$expires_at = (int) ( $token['meta']['expires_at'] ?? 0 );
+		if ( $expires_at > 0 && $expires_at <= time() + 60 ) {
+			$refreshed = $this->refresh_access_token( $user_id, $token );
+			if ( is_wp_error( $refreshed ) ) {
+				return $refreshed;
+			}
+			$token = $refreshed;
+		}
+
 		$response = wp_remote_get(
 			$url,
 			array(
@@ -168,6 +185,67 @@ abstract class Jot_Service_OAuth2 extends Jot_Service {
 
 		$decoded = json_decode( (string) wp_remote_retrieve_body( $response ), true );
 		return is_array( $decoded ) ? $decoded : array();
+	}
+
+	/**
+	 * Exchange a refresh_token for a new access_token. Stores and returns the new token record.
+	 *
+	 * @param array{access_token:string, meta:array<string,mixed>} $token
+	 * @return array{access_token:string, meta:array<string,mixed>}|WP_Error
+	 */
+	protected function refresh_access_token( int $user_id, array $token ) {
+		$refresh = (string) ( $token['meta']['refresh_token'] ?? '' );
+		if ( $refresh === '' ) {
+			return new WP_Error( 'jot_no_refresh_token', __( 'Access token expired and no refresh token is available. Reconnect the service.', 'jot' ) );
+		}
+
+		$credentials = $this->get_app_credentials();
+		if ( ! $credentials ) {
+			return new WP_Error( 'jot_app_not_configured', __( 'Service app credentials missing.', 'jot' ) );
+		}
+
+		$response = wp_remote_post(
+			$this->access_token_url,
+			array(
+				'headers' => array( 'Accept' => 'application/json' ),
+				'body'    => array(
+					'client_id'     => $credentials['client_id'],
+					'client_secret' => $credentials['client_secret'],
+					'grant_type'    => 'refresh_token',
+					'refresh_token' => $refresh,
+				),
+				'timeout' => 15,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+		$status = (int) wp_remote_retrieve_response_code( $response );
+		if ( $status < 200 || $status >= 300 ) {
+			return new WP_Error( 'jot_refresh_failed', (string) wp_remote_retrieve_body( $response ) );
+		}
+
+		$body = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+		if ( ! is_array( $body ) || empty( $body['access_token'] ) ) {
+			return new WP_Error( 'jot_refresh_malformed', __( 'Refresh response was malformed.', 'jot' ) );
+		}
+
+		$meta = $token['meta'];
+		if ( ! empty( $body['refresh_token'] ) ) {
+			$meta['refresh_token'] = (string) $body['refresh_token'];
+		}
+		if ( ! empty( $body['expires_at'] ) ) {
+			$meta['expires_at'] = (int) $body['expires_at'];
+		} elseif ( ! empty( $body['expires_in'] ) ) {
+			$meta['expires_at'] = time() + (int) $body['expires_in'];
+		}
+
+		$this->store_token( $user_id, (string) $body['access_token'], $meta );
+		return array(
+			'access_token' => (string) $body['access_token'],
+			'meta'         => $meta,
+		);
 	}
 
 	/**
