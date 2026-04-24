@@ -128,7 +128,7 @@ class Jot_Connections_Page {
 			<?php endif; ?>
 
 			<h2><?php esc_html_e( 'Your connections', 'jot' ); ?></h2>
-			<p><?php esc_html_e( 'Connections are per-user. Your tokens are not shared with other users on this site.', 'jot' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Connections are per-user. Your tokens are never shared with other users on this site.', 'jot' ); ?></p>
 
 			<table class="widefat striped">
 				<thead>
@@ -197,8 +197,11 @@ class Jot_Connections_Page {
 			</table>
 
 			<?php if ( $is_admin ) : ?>
-				<h2 style="margin-top:32px"><?php esc_html_e( 'OAuth app credentials (site-wide)', 'jot' ); ?></h2>
-				<p><?php esc_html_e( 'Register an OAuth app with each service and enter the client credentials below. These are shared by all users on this site.', 'jot' ); ?></p>
+				<hr style="margin:32px 0;" />
+				<h2><?php esc_html_e( 'OAuth app credentials', 'jot' ); ?></h2>
+				<p class="description">
+					<?php esc_html_e( 'Administrators only. Register an OAuth app with each service and enter its client credentials here. These credentials are shared by every user on this site — each user then connects their own account.', 'jot' ); ?>
+				</p>
 
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<input type="hidden" name="action" value="jot_save_oauth_apps" />

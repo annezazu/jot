@@ -1,6 +1,6 @@
 /**
  * Jot dashboard widget styles.
- * Phase 1: minimal, inherits core .postbox chrome.
+ * Inherits core .postbox chrome; only styles internal structure.
  */
 
 .jot-widget__header {
@@ -38,14 +38,147 @@
 	color: #50575e;
 }
 
+.jot-widget__notice {
+	padding: 8px 12px;
+	margin-bottom: 10px;
+	border-radius: 4px;
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.jot-widget__notice--warning {
+	background: #fcf9e8;
+	border-left: 4px solid #dba617;
+	color: #4a3500;
+}
+
+.jot-widget__digests {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.jot-widget__card {
+	padding: 10px 12px;
+	border: 1px solid #f0f0f1;
+	border-radius: 4px;
+	margin-bottom: 8px;
+	position: relative;
+	transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.jot-widget__card--dismissing {
+	opacity: 0;
+	transform: translateX(8px);
+	pointer-events: none;
+}
+
+.jot-widget__card-title {
+	margin-bottom: 4px;
+	padding-right: 22px; /* room for the dismiss × */
+}
+
+.jot-widget__card-badge {
+	display: inline-block;
+	font-size: 11px;
+	padding: 1px 6px;
+	margin-right: 6px;
+	border-radius: 3px;
+	background: #f0f0f1;
+	color: #50575e;
+	vertical-align: 2px;
+}
+
+.jot-widget__card-digest {
+	margin: 4px 0 8px;
+	color: #3c434a;
+	font-size: 13px;
+	line-height: 1.45;
+}
+
+.jot-widget__card-actions {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.jot-widget__card-error {
+	margin: 6px 0 0;
+	padding: 4px 8px;
+	color: #8a2424;
+	background: #fbeaea;
+	border-radius: 3px;
+	font-size: 12px;
+}
+
+.jot-widget__card-success {
+	margin: 0;
+	color: #1d4d2e;
+	font-size: 13px;
+}
+
+.jot-widget__dismiss {
+	position: absolute;
+	top: 4px;
+	right: 6px;
+	background: transparent;
+	border: 0;
+	font-size: 18px;
+	line-height: 1;
+	padding: 2px 6px;
+	color: #787c82;
+	cursor: pointer;
+	border-radius: 3px;
+}
+
+.jot-widget__dismiss:hover,
+.jot-widget__dismiss:focus {
+	color: #1d2327;
+	background: #f0f0f1;
+}
+
 .jot-widget__drafts-list {
 	margin: 0;
 	padding: 0;
 	list-style: none;
 }
 
-.jot-widget__drafts-list li {
+.jot-widget__draft {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 8px;
 	padding: 4px 0;
+	border-bottom: 1px solid #f6f7f7;
+}
+
+.jot-widget__draft:last-child {
+	border-bottom: 0;
+}
+
+.jot-widget__draft-title {
+	flex: 1 1 auto;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.jot-widget__draft-meta {
+	display: inline-flex;
+	gap: 6px;
+	align-items: baseline;
+	flex: 0 0 auto;
+	font-size: 12px;
+}
+
+.jot-widget__tier-pill {
+	display: inline-block;
+	padding: 1px 6px;
+	font-size: 11px;
+	border-radius: 10px;
+	background: #e7f0fa;
+	color: #1e4e7a;
 }
 
 .jot-widget__muted {
@@ -63,61 +196,27 @@
 	align-items: center;
 }
 
-.jot-widget__digests {
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-
-.jot-widget__card {
-	padding: 10px 12px;
-	border: 1px solid #f0f0f1;
-	border-radius: 4px;
-	margin-bottom: 8px;
-	position: relative;
-}
-
-.jot-widget__card-badge {
-	display: inline-block;
-	font-size: 11px;
-	padding: 1px 6px;
-	margin-right: 6px;
+.jot-widget__debug {
+	margin-top: 16px;
+	padding: 8px;
+	background: #fafafa;
 	border-radius: 3px;
-	background: #f0f0f1;
-	color: #50575e;
-	vertical-align: 2px;
+	font-size: 12px;
 }
 
-.jot-widget__dismiss {
-	position: absolute;
-	top: 4px;
-	right: 6px;
-	background: transparent;
-	border: 0;
-	font-size: 18px;
-	line-height: 1;
-	padding: 2px 6px;
-	color: #787c82;
+.jot-widget__debug summary {
 	cursor: pointer;
+	color: #50575e;
 }
 
-.jot-widget__dismiss:hover,
-.jot-widget__dismiss:focus {
-	color: #1d2327;
-}
-
-.jot-widget__card-title {
-	margin-bottom: 4px;
-}
-
-.jot-widget__card-digest {
-	margin: 4px 0 8px;
-	color: #3c434a;
-}
-
-.jot-widget__card-actions {
-	display: flex;
-	gap: 6px;
+.jot-widget__debug-pre {
+	white-space: pre-wrap;
+	max-height: 200px;
+	overflow: auto;
+	font-size: 11px;
+	background: #f6f7f7;
+	padding: 8px;
+	margin-top: 6px;
 }
 
 .jot-status {
