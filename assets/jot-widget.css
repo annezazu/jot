@@ -27,10 +27,9 @@
 
 .jot-widget__section h4 {
 	margin: 0 0 8px;
-	font-size: 13px;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
-	color: #50575e;
+	font-size: 14px;
+	font-weight: 600;
+	color: #1d2327;
 }
 
 .jot-widget__empty {

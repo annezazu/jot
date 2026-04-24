@@ -21,6 +21,18 @@ class Jot_Connections_Page {
 	public const MENU_SLUG       = 'jot-connections';
 	public const APPS_OPTION_KEY = 'jot_oauth_apps';
 
+	/**
+	 * Register admin-post handlers. Must be called on a hook that fires for
+	 * admin-post.php requests (e.g. `init` or `admin_init`), not `admin_menu` —
+	 * admin_menu does NOT fire on admin-post.php, and if form submissions
+	 * target admin-post.php the handler callback must already be attached.
+	 */
+	public static function boot(): void {
+		$instance = new self();
+		add_action( 'admin_post_jot_save_oauth_apps', array( $instance, 'handle_save_apps' ) );
+		add_action( 'admin_post_jot_disconnect_service', array( $instance, 'handle_disconnect' ) );
+	}
+
 	public function register(): void {
 		add_menu_page(
 			__( 'Jot', 'jot' ),
@@ -40,9 +52,6 @@ class Jot_Connections_Page {
 			self::MENU_SLUG,
 			array( $this, 'render' )
 		);
-
-		add_action( 'admin_post_jot_save_oauth_apps', array( $this, 'handle_save_apps' ) );
-		add_action( 'admin_post_jot_disconnect_service', array( $this, 'handle_disconnect' ) );
 	}
 
 	public function handle_save_apps(): void {
