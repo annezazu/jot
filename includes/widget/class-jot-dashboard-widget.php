@@ -2,12 +2,13 @@
 /**
  * Jot Dashboard Widget.
  *
- * Renders:
- *   - Empty state if the user hasn't connected any service yet.
- *   - Otherwise the latest cached digests with a [Quick draft] button each.
- *   - "Your drafts from Jot" — posts created via /jot/v1/draft.
- *
- * All REST interactions live in assets/jot-widget.js.
+ * Render path:
+ *  - No connections → single-CTA empty state.
+ *  - Connections but no activity → "no recent activity" empty state.
+ *  - Otherwise → one card per suggestion. Cards derive from either AI
+ *    suggestion-card meta (preferred) or raw digest meta (fallback). Tier
+ *    buttons appear on every card when an AI provider is configured; a single
+ *    Quick draft appears on every card when AI is not configured.
  *
  * @package Jot
  */
@@ -18,7 +19,8 @@ defined( 'ABSPATH' ) || exit;
 
 class Jot_Dashboard_Widget {
 
-	public const WIDGET_ID = 'jot_dashboard_widget';
+	public const WIDGET_ID      = 'jot_dashboard_widget';
+	public const MAX_CARDS_SHOWN = 3;
 
 	public function register(): void {
 		wp_add_dashboard_widget(
@@ -33,15 +35,16 @@ class Jot_Dashboard_Widget {
 	}
 
 	public function render(): void {
-		$user_id            = get_current_user_id();
-		$connections        = jot_get_connected_services( $user_id );
-		$settings_url       = admin_url( 'admin.php?page=jot-settings' );
-		$connections_url    = admin_url( 'admin.php?page=jot-connections' );
-		$drafts             = $this->get_jot_drafts();
-		$cards              = jot_get_user_array( $user_id, Jot_Cron::USER_CARDS_META );
-		$digests            = jot_get_user_array( $user_id, Jot_Cron::USER_DIGESTS_META );
-		$last_refresh       = (int) get_user_meta( $user_id, Jot_Cron::USER_LAST_REFRESH, true );
-		$ai_available       = class_exists( 'Jot_Ai' ) && Jot_Ai::is_available();
+		$user_id         = get_current_user_id();
+		$connections     = jot_get_connected_services( $user_id );
+		$settings_url    = admin_url( 'admin.php?page=jot-settings' );
+		$connections_url = admin_url( 'admin.php?page=jot-connections' );
+		$last_refresh    = (int) get_user_meta( $user_id, Jot_Cron::USER_LAST_REFRESH, true );
+		$ai_available    = class_exists( 'Jot_Ai' ) && Jot_Ai::is_available();
+		$ai_error        = (string) get_user_meta( $user_id, Jot_Cron::USER_AI_ERROR_META, true );
+
+		$cards   = $this->build_card_list( $user_id );
+		$drafts  = $this->get_jot_drafts();
 
 		?>
 		<div class="jot-widget"
@@ -60,81 +63,36 @@ class Jot_Dashboard_Widget {
 				</a>
 			</div>
 
-			<section class="jot-widget__section jot-widget__suggestions">
+			<section class="jot-widget__section jot-widget__suggestions" aria-live="polite">
 				<h4><?php esc_html_e( 'Suggestions', 'jot' ); ?></h4>
 
-				<?php if ( empty( $connections ) ) : ?>
-					<div class="jot-widget__empty">
-						<p><?php esc_html_e( 'No suggestions yet. Connect a service to start receiving post ideas drawn from your activity.', 'jot' ); ?></p>
-						<p>
-							<a class="button button-primary" href="<?php echo esc_url( $connections_url ); ?>">
-								<?php esc_html_e( 'Connect a service', 'jot' ); ?>
-							</a>
-						</p>
-					</div>
-				<?php elseif ( ! empty( $cards ) ) : ?>
-					<ul class="jot-widget__digests">
-						<?php foreach ( $cards as $card ) : ?>
-							<li class="jot-widget__card" data-angle-key="<?php echo esc_attr( (string) ( $card['angle_key'] ?? '' ) ); ?>">
-								<button type="button" class="jot-widget__dismiss" aria-label="<?php esc_attr_e( 'Dismiss this suggestion', 'jot' ); ?>">×</button>
-								<div class="jot-widget__card-title">
-									<span class="jot-widget__card-badge"><?php echo esc_html( (string) ( $card['label'] ?? '' ) ); ?></span>
-									<strong><?php echo esc_html( (string) ( $card['title'] ?? '' ) ); ?></strong>
-								</div>
-								<p class="jot-widget__card-digest"><?php echo esc_html( (string) ( $card['rationale'] ?? '' ) ); ?></p>
-								<div class="jot-widget__card-actions">
-									<button type="button" class="button jot-widget__tier" data-tier="spark"><?php esc_html_e( 'Quick spark', 'jot' ); ?></button>
-									<button type="button" class="button jot-widget__tier" data-tier="outline"><?php esc_html_e( 'Outline', 'jot' ); ?></button>
-									<button type="button" class="button button-primary jot-widget__tier" data-tier="full"><?php esc_html_e( 'Full draft', 'jot' ); ?></button>
-								</div>
-							</li>
-						<?php endforeach; ?>
-					</ul>
-				<?php elseif ( empty( $digests ) ) : ?>
-					<div class="jot-widget__empty">
-						<p><?php esc_html_e( 'No recent activity yet. Refresh to check now, or wait for the next daily update.', 'jot' ); ?></p>
-					</div>
-				<?php else : ?>
-					<?php if ( ! $ai_available ) : ?>
-						<p class="jot-widget__muted"><?php esc_html_e( 'Connect an AI provider to get titled suggestions instead of raw digests.', 'jot' ); ?></p>
-					<?php endif; ?>
-					<ul class="jot-widget__digests">
-						<?php foreach ( $digests as $entry ) : ?>
-							<li class="jot-widget__card" data-angle-key="<?php echo esc_attr( (string) ( $entry['angle_key'] ?? '' ) ); ?>">
-								<div class="jot-widget__card-title">
-									<strong><?php echo esc_html( (string) ( $entry['label'] ?? '' ) ); ?></strong>
-								</div>
-								<p class="jot-widget__card-digest"><?php echo esc_html( (string) ( $entry['digest'] ?? '' ) ); ?></p>
-								<div class="jot-widget__card-actions">
-									<button type="button" class="button button-primary jot-widget__quick-draft">
-										<?php esc_html_e( 'Quick draft', 'jot' ); ?>
-									</button>
-								</div>
-							</li>
-						<?php endforeach; ?>
-					</ul>
-				<?php endif; ?>
+				<?php $this->render_suggestions( $user_id, $connections, $cards, $ai_available, $ai_error, $connections_url ); ?>
 			</section>
 
 			<section class="jot-widget__section jot-widget__drafts">
 				<h4><?php esc_html_e( 'Your drafts from Jot', 'jot' ); ?></h4>
 				<?php if ( empty( $drafts ) ) : ?>
-					<p class="jot-widget__muted"><?php esc_html_e( 'Drafts created from Jot suggestions will appear here.', 'jot' ); ?></p>
+					<p class="jot-widget__muted"><?php esc_html_e( 'Jot drafts appear here once you create them.', 'jot' ); ?></p>
 				<?php else : ?>
 					<ul class="jot-widget__drafts-list">
-						<?php foreach ( $drafts as $draft ) : ?>
-							<li>
-								<a href="<?php echo esc_url( get_edit_post_link( $draft->ID ) ); ?>">
+						<?php foreach ( $drafts as $draft ) :
+							$ts   = (int) get_post_timestamp( $draft );
+							$tier = (string) get_post_meta( $draft->ID, '_jot_tier', true );
+							?>
+							<li class="jot-widget__draft">
+								<a class="jot-widget__draft-title" href="<?php echo esc_url( get_edit_post_link( $draft->ID ) ); ?>">
 									<?php echo esc_html( get_the_title( $draft ) ?: __( '(no title)', 'jot' ) ); ?>
 								</a>
-								<span class="jot-widget__muted">
-									<?php
-									/* translators: %s: human time diff e.g. "2 hours". */
-									printf(
-										esc_html__( '— %s ago', 'jot' ),
-										esc_html( human_time_diff( (int) get_post_timestamp( $draft ), time() ) )
-									);
-									?>
+								<span class="jot-widget__draft-meta">
+									<?php if ( $tier !== '' && $tier !== 'quick_draft' ) : ?>
+										<span class="jot-widget__tier-pill"><?php echo esc_html( $this->tier_label( $tier ) ); ?></span>
+									<?php endif; ?>
+									<span class="jot-widget__muted" title="<?php echo esc_attr( wp_date( 'c', $ts ) ); ?>">
+										<?php
+										/* translators: %s: human time diff e.g. "2 hours". */
+										printf( esc_html__( '%s ago', 'jot' ), esc_html( human_time_diff( $ts, time() ) ) );
+										?>
+									</span>
 								</span>
 							</li>
 						<?php endforeach; ?>
@@ -142,29 +100,14 @@ class Jot_Dashboard_Widget {
 				<?php endif; ?>
 			</section>
 
-			<?php if ( current_user_can( 'manage_options' ) && class_exists( 'Jot_Ai' ) ) :
-				$debug = jot_get_user_array( $user_id, Jot_Ai::DEBUG_META );
-				if ( ! empty( $debug ) ) :
-					?>
-					<details class="jot-widget__debug">
-						<summary><?php esc_html_e( 'AI debug (admin only)', 'jot' ); ?></summary>
-						<p class="jot-widget__muted">
-							<?php if ( ! empty( $debug['error'] ) ) : ?>
-								<strong><?php esc_html_e( 'Error:', 'jot' ); ?></strong>
-								<?php echo esc_html( (string) $debug['error'] ); ?>
-							<?php else : ?>
-								<strong><?php esc_html_e( 'Last raw response:', 'jot' ); ?></strong>
-							<?php endif; ?>
-						</p>
-						<?php if ( ! empty( $debug['raw'] ) ) : ?>
-							<pre style="white-space:pre-wrap;max-height:200px;overflow:auto;font-size:11px;background:#f6f7f7;padding:8px;"><?php echo esc_html( (string) $debug['raw'] ); ?></pre>
-						<?php endif; ?>
-					</details>
-				<?php endif; ?>
-			<?php endif; ?>
+			<?php $this->render_debug_panel( $user_id ); ?>
 
-			<footer class="jot-widget__footer" aria-live="polite">
-				<span class="jot-widget__muted jot-widget__refreshed">
+			<footer class="jot-widget__footer">
+				<span class="jot-widget__muted jot-widget__refreshed"
+					<?php if ( $last_refresh > 0 ) : ?>
+						title="<?php echo esc_attr( wp_date( 'c', $last_refresh ) ); ?>"
+					<?php endif; ?>
+				>
 					<?php
 					if ( $last_refresh > 0 ) {
 						/* translators: %s: human time diff e.g. "2 hours" */
@@ -182,6 +125,171 @@ class Jot_Dashboard_Widget {
 			</footer>
 		</div>
 		<?php
+	}
+
+	/**
+	 * @param array<int, array{id:string,label:string,user:string}> $connections
+	 * @param array<int, array<string, mixed>>                      $cards
+	 */
+	private function render_suggestions( int $user_id, array $connections, array $cards, bool $ai_available, string $ai_error, string $connections_url ): void {
+		if ( empty( $connections ) ) {
+			?>
+			<div class="jot-widget__empty">
+				<p><?php esc_html_e( "Connect a service and Jot will suggest post ideas from your activity.", 'jot' ); ?></p>
+				<p>
+					<a class="button button-primary" href="<?php echo esc_url( $connections_url ); ?>">
+						<?php esc_html_e( 'Connect a service', 'jot' ); ?>
+					</a>
+				</p>
+			</div>
+			<?php
+			return;
+		}
+
+		if ( empty( $cards ) ) {
+			?>
+			<div class="jot-widget__empty">
+				<p><?php esc_html_e( 'Nothing new in your activity yet. Try Refresh, or come back tomorrow.', 'jot' ); ?></p>
+			</div>
+			<?php
+			return;
+		}
+
+		if ( $ai_error !== '' ) {
+			?>
+			<div class="jot-widget__notice jot-widget__notice--warning" role="status">
+				<strong><?php esc_html_e( 'AI is unavailable.', 'jot' ); ?></strong>
+				<?php esc_html_e( 'Showing raw activity digests below. Open the AI debug panel for details.', 'jot' ); ?>
+			</div>
+			<?php
+		} elseif ( ! $ai_available ) {
+			?>
+			<p class="jot-widget__muted"><?php esc_html_e( 'Connect an AI provider for titled suggestions and full drafts.', 'jot' ); ?></p>
+			<?php
+		}
+
+		echo '<ul class="jot-widget__digests">';
+		foreach ( $cards as $card ) {
+			$this->render_card( $card, $ai_available && $ai_error === '' );
+		}
+		echo '</ul>';
+	}
+
+	/**
+	 * @param array<string, mixed> $card
+	 */
+	private function render_card( array $card, bool $tier_buttons ): void {
+		$angle_key = (string) ( $card['angle_key'] ?? '' );
+		$title     = (string) ( $card['title'] ?? '' );
+		$body      = (string) ( $card['rationale'] ?? $card['digest'] ?? '' );
+
+		// Badge labels: prefer the plural `labels` array; fall back to single `label`.
+		$labels = array();
+		if ( isset( $card['labels'] ) && is_array( $card['labels'] ) ) {
+			$labels = array_values( array_filter( array_map( 'strval', $card['labels'] ) ) );
+		}
+		if ( empty( $labels ) && ! empty( $card['label'] ) ) {
+			$labels = array( (string) $card['label'] );
+		}
+		$badge_list = $this->badges_for( $labels );
+		$badge_aria = $labels ? implode( ', ', $labels ) : '';
+		?>
+		<li class="jot-widget__card" data-angle-key="<?php echo esc_attr( $angle_key ); ?>">
+			<button
+				type="button"
+				class="jot-widget__dismiss"
+				aria-label="<?php echo esc_attr( sprintf( /* translators: %s: card title */ __( 'Dismiss: %s', 'jot' ), $title !== '' ? $title : $badge_aria ) ); ?>"
+			>×</button>
+			<div class="jot-widget__card-title">
+				<?php if ( ! empty( $badge_list ) ) : ?>
+					<div class="jot-widget__card-badges">
+						<?php foreach ( $badge_list as $badge ) : ?>
+							<span class="jot-widget__card-badge"><?php echo esc_html( $badge ); ?></span>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
+				<?php if ( $title !== '' ) : ?>
+					<strong class="jot-widget__card-headline"><?php echo esc_html( $title ); ?></strong>
+				<?php endif; ?>
+			</div>
+			<p class="jot-widget__card-digest"><?php echo esc_html( $body ); ?></p>
+			<div class="jot-widget__card-actions">
+				<?php if ( $tier_buttons ) : ?>
+					<button type="button" class="button jot-widget__tier" data-tier="spark"><?php esc_html_e( 'Quick spark', 'jot' ); ?></button>
+					<button type="button" class="button jot-widget__tier" data-tier="outline"><?php esc_html_e( 'Outline', 'jot' ); ?></button>
+					<button type="button" class="button button-primary jot-widget__tier" data-tier="full"><?php esc_html_e( 'Full draft', 'jot' ); ?></button>
+				<?php else : ?>
+					<button type="button" class="button button-primary jot-widget__quick-draft">
+						<?php esc_html_e( 'Quick draft', 'jot' ); ?>
+					</button>
+				<?php endif; ?>
+			</div>
+			<p class="jot-widget__card-error" role="alert" hidden></p>
+		</li>
+		<?php
+	}
+
+	private function render_debug_panel( int $user_id ): void {
+		if ( ! current_user_can( 'manage_options' ) || ! class_exists( 'Jot_Ai' ) ) {
+			return;
+		}
+		$debug = jot_get_user_array( $user_id, Jot_Ai::DEBUG_META );
+		if ( empty( $debug ) ) {
+			return;
+		}
+		?>
+		<details class="jot-widget__debug">
+			<summary><?php esc_html_e( 'AI debug (admin only)', 'jot' ); ?></summary>
+			<p class="jot-widget__muted">
+				<?php if ( ! empty( $debug['error'] ) ) : ?>
+					<strong><?php esc_html_e( 'Error:', 'jot' ); ?></strong>
+					<?php echo esc_html( (string) $debug['error'] ); ?>
+				<?php else : ?>
+					<strong><?php esc_html_e( 'Last raw response:', 'jot' ); ?></strong>
+				<?php endif; ?>
+			</p>
+			<?php if ( ! empty( $debug['raw'] ) ) : ?>
+				<pre class="jot-widget__debug-pre"><?php echo esc_html( (string) $debug['raw'] ); ?></pre>
+			<?php endif; ?>
+		</details>
+		<?php
+	}
+
+	/**
+	 * Build the unified card list. Prefer AI cards; fall back to digests.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function build_card_list( int $user_id ): array {
+		$cards   = jot_get_user_array( $user_id, Jot_Cron::USER_CARDS_META );
+		$digests = jot_get_user_array( $user_id, Jot_Cron::USER_DIGESTS_META );
+
+		$source = ! empty( $cards ) ? $cards : $digests;
+		// Digest entries are card-shaped enough: angle_key, label, digest. The
+		// render pass uses `digest` when `rationale` is missing and leaves `title`
+		// empty so only the service badge shows.
+		return array_slice( $source, 0, self::MAX_CARDS_SHOWN );
+	}
+
+	/**
+	 * @param array<int, string> $labels
+	 * @return array<int, string>
+	 */
+	private function badges_for( array $labels ): array {
+		$labels = array_values( array_unique( $labels ) );
+		if ( count( $labels ) <= 2 ) {
+			return $labels;
+		}
+		return array( __( 'Multiple', 'jot' ) );
+	}
+
+	private function tier_label( string $tier ): string {
+		return match ( $tier ) {
+			'spark'   => __( 'Spark', 'jot' ),
+			'outline' => __( 'Outline', 'jot' ),
+			'full'    => __( 'Full draft', 'jot' ),
+			default   => $tier,
+		};
 	}
 
 	/**

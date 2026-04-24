@@ -27,10 +27,13 @@ class Jot_Prompts {
 	 */
 	public static function cards( array $digests, array $recent_titles, string $voice_hint ): string {
 		$digest_lines = array();
+		$service_ids  = array();
 		foreach ( $digests as $d ) {
-			$digest_lines[] = '- ' . $d['label'] . ': ' . $d['digest'];
+			$digest_lines[] = '- [' . $d['service'] . '] ' . $d['label'] . ': ' . $d['digest'];
+			$service_ids[]  = (string) $d['service'];
 		}
 		$digest_block = $digest_lines ? implode( "\n", $digest_lines ) : '(no recent activity)';
+		$service_list = $service_ids ? implode( ', ', array_map( static fn ( string $s ): string => '"' . $s . '"', $service_ids ) ) : '(none)';
 
 		$title_lines = array_slice( array_map( static fn ( string $t ): string => '- ' . $t, $recent_titles ), 0, 20 );
 		$titles_block = $title_lines ? implode( "\n", $title_lines ) : '(no recent posts)';
@@ -45,17 +48,20 @@ The writer's recent post titles (most recent first):
 
 The writer's voice / style notes: {$voice}
 
-The writer's activity in the last week:
+The writer's activity in the last week (each line is prefixed with its service ID in brackets):
 {$digest_block}
 
-Suggest 3 to 5 distinct post angles this writer could write about. Prefer angles that reflect specific details from the activity over generic topics. Avoid repeating or closely mirroring recent post titles.
+Available service IDs: {$service_list}
+
+Suggest 3 to 5 distinct post angles this writer could write about. Prefer angles that reflect specific details from the activity over generic topics. Avoid repeating or closely mirroring recent post titles. Feel free to weave multiple services together when an angle naturally spans them.
 
 For each angle, produce:
 - title: under 60 characters
 - rationale: one sentence in plain language explaining why this angle is worth writing right now, referencing the specific activity
 - angle_key: a short lowercase kebab-case slug (max 40 chars)
+- sources: an array of service IDs from the list above that this angle draws from. Use only IDs from the list. Include every service that meaningfully informs the angle.
 
-Return ONLY a JSON array of objects with keys: title, rationale, angle_key.
+Return ONLY a JSON array of objects with keys: title, rationale, angle_key, sources.
 PROMPT;
 	}
 
