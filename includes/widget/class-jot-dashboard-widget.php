@@ -201,11 +201,15 @@ class Jot_Dashboard_Widget {
 				aria-label="<?php echo esc_attr( sprintf( /* translators: %s: card title */ __( 'Dismiss: %s', 'jot' ), $title !== '' ? $title : $badge_aria ) ); ?>"
 			>×</button>
 			<div class="jot-widget__card-title">
-				<?php foreach ( $badge_list as $badge ) : ?>
-					<span class="jot-widget__card-badge"><?php echo esc_html( $badge ); ?></span>
-				<?php endforeach; ?>
+				<?php if ( ! empty( $badge_list ) ) : ?>
+					<div class="jot-widget__card-badges">
+						<?php foreach ( $badge_list as $badge ) : ?>
+							<span class="jot-widget__card-badge"><?php echo esc_html( $badge ); ?></span>
+						<?php endforeach; ?>
+					</div>
+				<?php endif; ?>
 				<?php if ( $title !== '' ) : ?>
-					<strong><?php echo esc_html( $title ); ?></strong>
+					<strong class="jot-widget__card-headline"><?php echo esc_html( $title ); ?></strong>
 				<?php endif; ?>
 			</div>
 			<p class="jot-widget__card-digest"><?php echo esc_html( $body ); ?></p>
