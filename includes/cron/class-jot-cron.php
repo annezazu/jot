@@ -15,13 +15,18 @@ defined( 'ABSPATH' ) || exit;
 
 class Jot_Cron {
 
-	public const EVENT                = 'jot_daily_refresh';
-	public const USER_DIGESTS_META    = 'jot_digests';
-	public const USER_LAST_REFRESH    = 'jot_last_refresh';
+	public const EVENT                 = 'jot_daily_refresh';
+	public const USER_DIGESTS_META     = 'jot_digests';
+	public const USER_CARDS_META       = 'jot_suggestion_cards';
+	public const USER_LAST_REFRESH     = 'jot_last_refresh';
+	public const USER_ACTED_ON_META    = 'jot_user_acted_on';
+	public const USER_DISMISSED_META   = 'jot_user_dismissed';
 	public const MANUAL_LOCK_TRANSIENT = 'jot_manual_refresh_lock_';
 
-	public const WINDOW_SECONDS  = 7 * DAY_IN_SECONDS;
-	public const MANUAL_DEBOUNCE = 5 * MINUTE_IN_SECONDS;
+	public const WINDOW_SECONDS    = 7 * DAY_IN_SECONDS;
+	public const MANUAL_DEBOUNCE   = 5 * MINUTE_IN_SECONDS;
+	public const DISMISS_TTL       = 7 * DAY_IN_SECONDS;
+	public const RECENT_TITLE_LIMIT = 20;
 
 	public static function boot(): void {
 		add_action( self::EVENT, array( __CLASS__, 'run' ) );
@@ -73,8 +78,81 @@ class Jot_Cron {
 		$digests = Jot_Signals::build_for_user( $user_id, $since );
 
 		update_user_meta( $user_id, self::USER_DIGESTS_META, $digests );
+
+		if ( class_exists( 'Jot_Ai' ) && Jot_Ai::is_available() && ! empty( $digests ) ) {
+			$cards = Jot_Ai::generate_cards(
+				$digests,
+				self::recent_post_titles( $user_id ),
+				self::voice_hint()
+			);
+			if ( is_array( $cards ) ) {
+				$cards = self::filter_suppressed( $user_id, $cards );
+				update_user_meta( $user_id, self::USER_CARDS_META, $cards );
+			} else {
+				// AI call errored: clear any stale cards so the widget falls back
+				// to digests instead of rendering yesterday's cards.
+				delete_user_meta( $user_id, self::USER_CARDS_META );
+			}
+		} else {
+			delete_user_meta( $user_id, self::USER_CARDS_META );
+		}
+
 		update_user_meta( $user_id, self::USER_LAST_REFRESH, time() );
 		return $digests;
+	}
+
+	/**
+	 * @return array<int, string>
+	 */
+	private static function recent_post_titles( int $user_id ): array {
+		$query = new WP_Query(
+			array(
+				'post_type'      => 'post',
+				'post_status'    => 'publish',
+				'author'         => $user_id,
+				'posts_per_page' => self::RECENT_TITLE_LIMIT,
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+				'no_found_rows'  => true,
+				'fields'         => 'ids',
+			)
+		);
+		return array_values( array_filter( array_map( 'get_the_title', $query->posts ) ) );
+	}
+
+	private static function voice_hint(): string {
+		$settings = get_option( 'jot_settings', array() );
+		return is_array( $settings ) && isset( $settings['voice_hint'] ) ? (string) $settings['voice_hint'] : '';
+	}
+
+	/**
+	 * Remove cards whose angle_key is on the acted-on list or currently dismissed.
+	 *
+	 * @param array<int, array<string, mixed>> $cards
+	 * @return array<int, array<string, mixed>>
+	 */
+	private static function filter_suppressed( int $user_id, array $cards ): array {
+		$acted_on  = jot_get_user_array( $user_id, self::USER_ACTED_ON_META );
+		$dismissed = jot_get_user_array( $user_id, self::USER_DISMISSED_META );
+
+		$now             = time();
+		$live_dismissed  = array();
+		foreach ( $dismissed as $angle_key => $expires_at ) {
+			if ( (int) $expires_at > $now ) {
+				$live_dismissed[ (string) $angle_key ] = (int) $expires_at;
+			}
+		}
+		if ( $live_dismissed !== $dismissed ) {
+			update_user_meta( $user_id, self::USER_DISMISSED_META, $live_dismissed );
+		}
+
+		return array_values(
+			array_filter(
+				$cards,
+				static fn ( array $c ): bool => ! in_array( $c['angle_key'] ?? '', $acted_on, true )
+					&& ! isset( $live_dismissed[ $c['angle_key'] ?? '' ] )
+			)
+		);
 	}
 
 	/**

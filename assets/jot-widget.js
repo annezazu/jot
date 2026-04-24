@@ -39,7 +39,19 @@
 
 		if ( target.classList.contains( 'jot-widget__quick-draft' ) ) {
 			event.preventDefault();
-			handleQuickDraft( target );
+			handleQuickDraft( target, '' );
+			return;
+		}
+
+		if ( target.classList.contains( 'jot-widget__tier' ) ) {
+			event.preventDefault();
+			handleQuickDraft( target, target.dataset.tier || '' );
+			return;
+		}
+
+		if ( target.classList.contains( 'jot-widget__dismiss' ) ) {
+			event.preventDefault();
+			handleDismiss( target );
 			return;
 		}
 
@@ -50,7 +62,7 @@
 		}
 	} );
 
-	function handleQuickDraft( button ) {
+	function handleDismiss( button ) {
 		const card = button.closest( '.jot-widget__card' );
 		if ( ! card ) {
 			return;
@@ -59,10 +71,36 @@
 		if ( ! angleKey ) {
 			return;
 		}
-		button.disabled = true;
-		button.textContent = __( 'Creating…' );
+		card.style.opacity = '0.4';
+		request( 'dismiss', { angle_key: angleKey } ).then( function ( res ) {
+			if ( res.status === 200 && res.data && res.data.ok ) {
+				card.remove();
+			} else {
+				card.style.opacity = '1';
+			}
+		} ).catch( function () {
+			card.style.opacity = '1';
+		} );
+	}
 
-		request( 'draft', { angle_key: angleKey } ).then( function ( res ) {
+	function handleQuickDraft( button, tier ) {
+		const card = button.closest( '.jot-widget__card' );
+		if ( ! card ) {
+			return;
+		}
+		const angleKey = card.dataset.angleKey;
+		if ( ! angleKey ) {
+			return;
+		}
+		const originalLabel = button.textContent;
+		const siblings = card.querySelectorAll( 'button' );
+		siblings.forEach( function ( b ) { b.disabled = true; } );
+		button.textContent = tier === 'full' ? __( 'Drafting…' ) : __( 'Creating…' );
+
+		const body = { angle_key: angleKey };
+		if ( tier ) { body.tier = tier; }
+
+		request( 'draft', body ).then( function ( res ) {
 			if ( res.status === 201 && res.data && res.data.ok ) {
 				card.innerHTML =
 					'<p>' + escapeHtml( __( 'Draft created' ) ) + ' — ' +
@@ -70,13 +108,13 @@
 					escapeHtml( __( 'Edit' ) ) +
 					'</a></p>';
 			} else {
-				button.disabled = false;
-				button.textContent = __( 'Quick draft' );
-				alert( __( 'Could not create draft. Try again.' ) );
+				siblings.forEach( function ( b ) { b.disabled = false; } );
+				button.textContent = originalLabel;
+				alert( ( res.data && res.data.error ) || __( 'Could not create draft. Try again.' ) );
 			}
 		} ).catch( function () {
-			button.disabled = false;
-			button.textContent = __( 'Quick draft' );
+			siblings.forEach( function ( b ) { b.disabled = false; } );
+			button.textContent = originalLabel;
 		} );
 	}
 

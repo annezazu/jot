@@ -50,7 +50,9 @@ abstract class Jot_Service_OAuth2 extends Jot_Service {
 		}
 		$params = apply_filters( 'jot_' . $this->id() . '_authorize_params', $params, $this );
 
-		wp_redirect( $this->authorize_url . '?' . http_build_query( $params ) );
+		$url = $this->authorize_url . '?' . http_build_query( $params );
+		$url = apply_filters( 'jot_' . $this->id() . '_authorize_url', $url, $this );
+		wp_redirect( $url );
 		exit;
 	}
 
