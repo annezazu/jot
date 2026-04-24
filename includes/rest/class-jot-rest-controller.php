@@ -102,8 +102,8 @@ class Jot_Rest_Controller {
 		$tier      = (string) ( $request->get_param( 'tier' ) ?? '' );
 		$user_id   = get_current_user_id();
 
-		$cards   = (array) get_user_meta( $user_id, Jot_Cron::USER_CARDS_META, true );
-		$digests = (array) get_user_meta( $user_id, Jot_Cron::USER_DIGESTS_META, true );
+		$cards   = jot_get_user_array( $user_id, Jot_Cron::USER_CARDS_META );
+		$digests = jot_get_user_array( $user_id, Jot_Cron::USER_DIGESTS_META );
 
 		$card = null;
 		foreach ( $cards as $entry ) {
@@ -169,7 +169,7 @@ class Jot_Rest_Controller {
 		}
 
 		// Record on acted-on list so the next cron run doesn't re-suggest it.
-		$acted_on = (array) get_user_meta( $user_id, Jot_Cron::USER_ACTED_ON_META, true );
+		$acted_on = jot_get_user_array( $user_id, Jot_Cron::USER_ACTED_ON_META );
 		if ( ! in_array( $angle_key, $acted_on, true ) ) {
 			$acted_on[] = $angle_key;
 			update_user_meta( $user_id, Jot_Cron::USER_ACTED_ON_META, $acted_on );
@@ -189,7 +189,7 @@ class Jot_Rest_Controller {
 	public static function dismiss( WP_REST_Request $request ): WP_REST_Response {
 		$angle_key = (string) $request->get_param( 'angle_key' );
 		$user_id   = get_current_user_id();
-		$dismissed = (array) get_user_meta( $user_id, Jot_Cron::USER_DISMISSED_META, true );
+		$dismissed = jot_get_user_array( $user_id, Jot_Cron::USER_DISMISSED_META );
 		$dismissed[ $angle_key ] = time() + Jot_Cron::DISMISS_TTL;
 		update_user_meta( $user_id, Jot_Cron::USER_DISMISSED_META, $dismissed );
 		return new WP_REST_Response( array( 'ok' => true ), 200 );

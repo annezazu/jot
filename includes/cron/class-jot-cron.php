@@ -132,8 +132,8 @@ class Jot_Cron {
 	 * @return array<int, array<string, mixed>>
 	 */
 	private static function filter_suppressed( int $user_id, array $cards ): array {
-		$acted_on  = (array) get_user_meta( $user_id, self::USER_ACTED_ON_META, true );
-		$dismissed = (array) get_user_meta( $user_id, self::USER_DISMISSED_META, true );
+		$acted_on  = jot_get_user_array( $user_id, self::USER_ACTED_ON_META );
+		$dismissed = jot_get_user_array( $user_id, self::USER_DISMISSED_META );
 
 		$now             = time();
 		$live_dismissed  = array();

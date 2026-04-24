@@ -128,6 +128,21 @@ function jot_register_admin_pages(): void {
 }
 
 /**
+ * Read an array-valued user meta entry safely.
+ *
+ * Plain `(array) get_user_meta( $id, $key, true )` is a trap: when the meta
+ * does not exist, get_user_meta returns '' (empty string), and `(array) ''`
+ * yields a single-element array containing the empty string — not an empty
+ * array. Callers then mistake "no meta" for "one item" and render garbage.
+ *
+ * @return array<mixed>
+ */
+function jot_get_user_array( int $user_id, string $key ): array {
+	$stored = get_user_meta( $user_id, $key, true );
+	return is_array( $stored ) ? $stored : array();
+}
+
+/**
  * Service registry.
  *
  * @return array<string, Jot_Service>

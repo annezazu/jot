@@ -38,8 +38,8 @@ class Jot_Dashboard_Widget {
 		$settings_url       = admin_url( 'admin.php?page=jot-settings' );
 		$connections_url    = admin_url( 'admin.php?page=jot-connections' );
 		$drafts             = $this->get_jot_drafts();
-		$cards              = (array) get_user_meta( $user_id, Jot_Cron::USER_CARDS_META, true );
-		$digests            = (array) get_user_meta( $user_id, Jot_Cron::USER_DIGESTS_META, true );
+		$cards              = jot_get_user_array( $user_id, Jot_Cron::USER_CARDS_META );
+		$digests            = jot_get_user_array( $user_id, Jot_Cron::USER_DIGESTS_META );
 		$last_refresh       = (int) get_user_meta( $user_id, Jot_Cron::USER_LAST_REFRESH, true );
 		$ai_available       = class_exists( 'Jot_Ai' ) && Jot_Ai::is_available();
 
@@ -143,7 +143,7 @@ class Jot_Dashboard_Widget {
 			</section>
 
 			<?php if ( current_user_can( 'manage_options' ) && class_exists( 'Jot_Ai' ) ) :
-				$debug = (array) get_user_meta( $user_id, Jot_Ai::DEBUG_META, true );
+				$debug = jot_get_user_array( $user_id, Jot_Ai::DEBUG_META );
 				if ( ! empty( $debug ) ) :
 					?>
 					<details class="jot-widget__debug">
