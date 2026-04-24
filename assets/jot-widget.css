@@ -114,11 +114,15 @@
 	display: inline-block;
 	font-size: 11px;
 	padding: 1px 6px;
-	margin-right: 6px;
+	margin-right: 4px;
 	border-radius: 3px;
 	background: #f0f0f1;
 	color: #50575e;
 	vertical-align: 2px;
+}
+
+.jot-widget__card-badge + .jot-widget__card-badge {
+	margin-left: 0;
 }
 
 .jot-widget__card-digest {

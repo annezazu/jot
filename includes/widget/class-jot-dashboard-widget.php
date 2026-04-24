@@ -180,20 +180,30 @@ class Jot_Dashboard_Widget {
 	 */
 	private function render_card( array $card, bool $tier_buttons ): void {
 		$angle_key = (string) ( $card['angle_key'] ?? '' );
-		$label     = (string) ( $card['label'] ?? '' );
 		$title     = (string) ( $card['title'] ?? '' );
 		$body      = (string) ( $card['rationale'] ?? $card['digest'] ?? '' );
+
+		// Badge labels: prefer the plural `labels` array; fall back to single `label`.
+		$labels = array();
+		if ( isset( $card['labels'] ) && is_array( $card['labels'] ) ) {
+			$labels = array_values( array_filter( array_map( 'strval', $card['labels'] ) ) );
+		}
+		if ( empty( $labels ) && ! empty( $card['label'] ) ) {
+			$labels = array( (string) $card['label'] );
+		}
+		$badge_list = $this->badges_for( $labels );
+		$badge_aria = $labels ? implode( ', ', $labels ) : '';
 		?>
 		<li class="jot-widget__card" data-angle-key="<?php echo esc_attr( $angle_key ); ?>">
 			<button
 				type="button"
 				class="jot-widget__dismiss"
-				aria-label="<?php echo esc_attr( sprintf( /* translators: %s: card title */ __( 'Dismiss: %s', 'jot' ), $title !== '' ? $title : $label ) ); ?>"
+				aria-label="<?php echo esc_attr( sprintf( /* translators: %s: card title */ __( 'Dismiss: %s', 'jot' ), $title !== '' ? $title : $badge_aria ) ); ?>"
 			>×</button>
 			<div class="jot-widget__card-title">
-				<?php if ( $label !== '' ) : ?>
-					<span class="jot-widget__card-badge"><?php echo esc_html( $label ); ?></span>
-				<?php endif; ?>
+				<?php foreach ( $badge_list as $badge ) : ?>
+					<span class="jot-widget__card-badge"><?php echo esc_html( $badge ); ?></span>
+				<?php endforeach; ?>
 				<?php if ( $title !== '' ) : ?>
 					<strong><?php echo esc_html( $title ); ?></strong>
 				<?php endif; ?>
@@ -255,6 +265,18 @@ class Jot_Dashboard_Widget {
 		// render pass uses `digest` when `rationale` is missing and leaves `title`
 		// empty so only the service badge shows.
 		return array_slice( $source, 0, self::MAX_CARDS_SHOWN );
+	}
+
+	/**
+	 * @param array<int, string> $labels
+	 * @return array<int, string>
+	 */
+	private function badges_for( array $labels ): array {
+		$labels = array_values( array_unique( $labels ) );
+		if ( count( $labels ) <= 2 ) {
+			return $labels;
+		}
+		return array( __( 'Multiple', 'jot' ) );
 	}
 
 	private function tier_label( string $tier ): string {
