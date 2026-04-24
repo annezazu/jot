@@ -25,7 +25,7 @@ class Jot_Cron {
 	public const MANUAL_LOCK_TRANSIENT = 'jot_manual_refresh_lock_';
 
 	public const WINDOW_SECONDS    = 7 * DAY_IN_SECONDS;
-	public const MANUAL_DEBOUNCE   = 5 * MINUTE_IN_SECONDS;
+	public const MANUAL_DEBOUNCE   = MINUTE_IN_SECONDS;
 	public const DISMISS_TTL       = 7 * DAY_IN_SECONDS;
 	public const RECENT_TITLE_LIMIT = 20;
 

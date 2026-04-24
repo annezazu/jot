@@ -135,13 +135,20 @@
 			if ( res.status === 429 ) {
 				button.disabled = false;
 				button.textContent = original;
-				announce( __( 'Please wait a few minutes before refreshing again.' ) );
+				const retry = ( res.data && res.data.retry_after ) || 0;
+				toast(
+					'warning',
+					retry > 0
+						? __( 'Please wait' ) + ' ' + Math.ceil( retry / 60 ) + ' ' + __( 'min before refreshing again.' )
+						: __( 'Please wait a few minutes before refreshing again.' )
+				);
 				return;
 			}
 			if ( res.status === 200 && res.data && res.data.ok ) {
 				return request( 'GET', 'render' ).then( function ( renderRes ) {
 					if ( renderRes.status === 200 && renderRes.data && renderRes.data.html ) {
 						replaceWidget( renderRes.data.html );
+						toast( 'success', __( 'Updated just now.' ) );
 						announce( __( 'Suggestions updated.' ) );
 					} else {
 						button.disabled = false;
@@ -151,10 +158,29 @@
 			}
 			button.disabled = false;
 			button.textContent = original;
+			toast( 'error', __( 'Refresh failed. Try again.' ) );
 		} ).catch( function () {
 			button.disabled = false;
 			button.textContent = original;
+			toast( 'error', __( 'Network error. Try again.' ) );
 		} );
+	}
+
+	function toast( kind, message ) {
+		// Drop any existing toast so repeated clicks don't stack.
+		const existing = currentRoot.querySelector( '.jot-widget__toast' );
+		if ( existing ) { existing.remove(); }
+
+		const el = document.createElement( 'div' );
+		el.className = 'jot-widget__toast jot-widget__toast--' + kind;
+		el.setAttribute( 'role', kind === 'error' ? 'alert' : 'status' );
+		el.textContent = message;
+		currentRoot.insertBefore( el, currentRoot.firstChild );
+		// Auto-dismiss after a few seconds.
+		setTimeout( function () {
+			el.classList.add( 'jot-widget__toast--leaving' );
+			setTimeout( function () { el.remove(); }, 180 );
+		}, kind === 'error' || kind === 'warning' ? 5000 : 2500 );
 	}
 
 	function replaceWidget( html ) {
