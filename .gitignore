@@ -24,3 +24,6 @@ Thumbs.db
 .env
 .env.local
 wp-cli.local.yml
+
+# Claude Code session artifacts
+.claude/

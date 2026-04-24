@@ -59,6 +59,36 @@
 	padding-top: 8px;
 	border-top: 1px solid #f0f0f1;
 	font-size: 12px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.jot-widget__digests {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.jot-widget__card {
+	padding: 10px 12px;
+	border: 1px solid #f0f0f1;
+	border-radius: 4px;
+	margin-bottom: 8px;
+}
+
+.jot-widget__card-title {
+	margin-bottom: 4px;
+}
+
+.jot-widget__card-digest {
+	margin: 4px 0 8px;
+	color: #3c434a;
+}
+
+.jot-widget__card-actions {
+	display: flex;
+	gap: 6px;
 }
 
 .jot-status {

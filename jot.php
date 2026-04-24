@@ -38,9 +38,9 @@ spl_autoload_register(
 			JOT_PLUGIN_DIR . 'includes/cron/' . $file,
 			JOT_PLUGIN_DIR . 'includes/rest/' . $file,
 			JOT_PLUGIN_DIR . 'includes/ai/' . $file,
-			JOT_PLUGIN_DIR . 'includes/oauth/' . $file,
-			JOT_PLUGIN_DIR . 'includes/services/' . $file,
 			JOT_PLUGIN_DIR . 'includes/signals/' . $file,
+			JOT_PLUGIN_DIR . 'includes/services/' . $file,
+			JOT_PLUGIN_DIR . 'includes/oauth/' . $file,
 		);
 
 		foreach ( $candidates as $path ) {
@@ -89,6 +89,16 @@ function jot_deactivate(): void {
 add_action( 'plugins_loaded', 'jot_load_textdomain' );
 function jot_load_textdomain(): void {
 	load_plugin_textdomain( 'jot', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+}
+
+add_action( 'plugins_loaded', 'jot_boot_subsystems' );
+function jot_boot_subsystems(): void {
+	if ( class_exists( 'Jot_Cron' ) ) {
+		Jot_Cron::boot();
+	}
+	if ( class_exists( 'Jot_Rest_Controller' ) ) {
+		Jot_Rest_Controller::boot();
+	}
 }
 
 add_action( 'wp_dashboard_setup', 'jot_register_dashboard_widget' );
