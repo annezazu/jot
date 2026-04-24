@@ -19,7 +19,8 @@ defined( 'ABSPATH' ) || exit;
 
 class Jot_Dashboard_Widget {
 
-	public const WIDGET_ID = 'jot_dashboard_widget';
+	public const WIDGET_ID      = 'jot_dashboard_widget';
+	public const MAX_CARDS_SHOWN = 3;
 
 	public function register(): void {
 		wp_add_dashboard_widget(
@@ -249,13 +250,11 @@ class Jot_Dashboard_Widget {
 		$cards   = jot_get_user_array( $user_id, Jot_Cron::USER_CARDS_META );
 		$digests = jot_get_user_array( $user_id, Jot_Cron::USER_DIGESTS_META );
 
-		if ( ! empty( $cards ) ) {
-			return $cards;
-		}
+		$source = ! empty( $cards ) ? $cards : $digests;
 		// Digest entries are card-shaped enough: angle_key, label, digest. The
 		// render pass uses `digest` when `rationale` is missing and leaves `title`
 		// empty so only the service badge shows.
-		return $digests;
+		return array_slice( $source, 0, self::MAX_CARDS_SHOWN );
 	}
 
 	private function tier_label( string $tier ): string {
