@@ -37,6 +37,7 @@ spl_autoload_register(
 			JOT_PLUGIN_DIR . 'includes/admin/' . $file,
 			JOT_PLUGIN_DIR . 'includes/cron/' . $file,
 			JOT_PLUGIN_DIR . 'includes/rest/' . $file,
+			JOT_PLUGIN_DIR . 'includes/privacy/' . $file,
 			JOT_PLUGIN_DIR . 'includes/signals/' . $file,
 			JOT_PLUGIN_DIR . 'includes/ai/' . $file,
 			JOT_PLUGIN_DIR . 'includes/services/' . $file,
@@ -101,6 +102,9 @@ function jot_boot_subsystems(): void {
 	}
 	if ( class_exists( 'Jot_Connections_Page' ) ) {
 		Jot_Connections_Page::boot();
+	}
+	if ( class_exists( 'Jot_Privacy' ) ) {
+		Jot_Privacy::boot();
 	}
 }
 
