@@ -31,6 +31,7 @@ class Jot_Connections_Page {
 		$instance = new self();
 		add_action( 'admin_post_jot_save_oauth_apps', array( $instance, 'handle_save_apps' ) );
 		add_action( 'admin_post_jot_disconnect_service', array( $instance, 'handle_disconnect' ) );
+		add_action( 'admin_post_jot_save_credentials', array( $instance, 'handle_save_credentials' ) );
 	}
 
 	public function register(): void {
@@ -70,6 +71,9 @@ class Jot_Connections_Page {
 			: array();
 
 		foreach ( jot_services() as $service ) {
+			if ( $service instanceof Jot_Service_Credentials ) {
+				continue;
+			}
 			$id           = $service->id();
 			$client_id    = isset( $submitted[ $id ]['client_id'] ) ? sanitize_text_field( (string) $submitted[ $id ]['client_id'] ) : '';
 			$client_secret_input = isset( $submitted[ $id ]['client_secret'] ) ? (string) $submitted[ $id ]['client_secret'] : '';
@@ -83,6 +87,45 @@ class Jot_Connections_Page {
 
 		update_option( self::APPS_OPTION_KEY, $existing, false );
 		wp_safe_redirect( add_query_arg( 'updated', '1', admin_url( 'admin.php?page=' . self::MENU_SLUG ) ) );
+		exit;
+	}
+
+	public function handle_save_credentials(): void {
+		if ( ! current_user_can( 'edit_posts' ) ) {
+			wp_die( esc_html__( 'Insufficient permissions.', 'jot' ) );
+		}
+		$service_id = isset( $_REQUEST['service'] ) ? sanitize_key( (string) wp_unslash( $_REQUEST['service'] ) ) : '';
+		check_admin_referer( 'jot-credentials-' . $service_id );
+
+		$services = jot_services();
+		$service  = $services[ $service_id ] ?? null;
+		if ( ! $service instanceof Jot_Service_Credentials ) {
+			wp_safe_redirect( add_query_arg( 'credentials_error', 'unknown', admin_url( 'admin.php?page=' . self::MENU_SLUG ) ) );
+			exit;
+		}
+
+		$fields = array();
+		if ( isset( $_POST['jot_credentials'] ) && is_array( $_POST['jot_credentials'] ) ) {
+			foreach ( wp_unslash( $_POST['jot_credentials'] ) as $key => $value ) {
+				$fields[ (string) $key ] = is_scalar( $value ) ? (string) $value : '';
+			}
+		}
+
+		$result = $service->authenticate( $fields, get_current_user_id() );
+		if ( is_wp_error( $result ) ) {
+			$url = add_query_arg(
+				array(
+					'page'              => self::MENU_SLUG,
+					'jot_credentials'   => $service_id,
+					'credentials_error' => rawurlencode( $result->get_error_message() ),
+				),
+				admin_url( 'admin.php' )
+			);
+			wp_safe_redirect( $url );
+			exit;
+		}
+
+		wp_safe_redirect( add_query_arg( 'connected', $service_id, admin_url( 'admin.php?page=' . self::MENU_SLUG ) ) );
 		exit;
 	}
 
@@ -126,6 +169,56 @@ class Jot_Connections_Page {
 					<p><?php echo esc_html( sprintf( /* translators: %s: service id */ __( 'Disconnected: %s', 'jot' ), sanitize_key( (string) wp_unslash( $_GET['disconnected'] ) ) ) ); ?></p>
 				</div>
 			<?php endif; ?>
+			<?php if ( ! empty( $_GET['credentials_error'] ) ) : ?>
+				<div class="notice notice-error is-dismissible">
+					<p><?php echo esc_html( rawurldecode( (string) wp_unslash( $_GET['credentials_error'] ) ) ); ?></p>
+				</div>
+			<?php endif; ?>
+
+			<?php
+			$credentials_target = isset( $_GET['jot_credentials'] ) ? sanitize_key( (string) wp_unslash( $_GET['jot_credentials'] ) ) : '';
+			$services_map       = jot_services();
+			if ( $credentials_target !== '' && isset( $services_map[ $credentials_target ] ) && $services_map[ $credentials_target ] instanceof Jot_Service_Credentials ) :
+				$cred_service = $services_map[ $credentials_target ];
+				?>
+				<h2><?php echo esc_html( sprintf( /* translators: %s: service label */ __( 'Connect %s', 'jot' ), $cred_service->label() ) ); ?></h2>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="jot_save_credentials" />
+					<input type="hidden" name="service" value="<?php echo esc_attr( $cred_service->id() ); ?>" />
+					<?php wp_nonce_field( 'jot-credentials-' . $cred_service->id() ); ?>
+					<table class="form-table" role="presentation">
+						<tbody>
+							<?php foreach ( $cred_service->credential_fields() as $field ) :
+								$key  = (string) ( $field['key'] ?? '' );
+								$type = (string) ( $field['type'] ?? 'text' );
+								if ( $key === '' ) {
+									continue;
+								}
+								?>
+								<tr>
+									<th scope="row"><label for="jot-cred-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( (string) ( $field['label'] ?? $key ) ); ?></label></th>
+									<td>
+										<input
+											type="<?php echo esc_attr( $type === 'password' ? 'password' : 'text' ); ?>"
+											id="jot-cred-<?php echo esc_attr( $key ); ?>"
+											class="regular-text"
+											name="jot_credentials[<?php echo esc_attr( $key ); ?>]"
+											placeholder="<?php echo esc_attr( (string) ( $field['placeholder'] ?? '' ) ); ?>"
+											autocomplete="off"
+										/>
+										<?php if ( ! empty( $field['help'] ) ) : ?>
+											<p class="description"><?php echo esc_html( (string) $field['help'] ); ?></p>
+										<?php endif; ?>
+									</td>
+								</tr>
+							<?php endforeach; ?>
+						</tbody>
+					</table>
+					<?php submit_button( __( 'Connect', 'jot' ) ); ?>
+					<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=' . self::MENU_SLUG ) ); ?>"><?php esc_html_e( 'Cancel', 'jot' ); ?></a>
+				</form>
+				<hr style="margin:32px 0;" />
+			<?php endif; ?>
 
 			<h2><?php esc_html_e( 'Your connections', 'jot' ); ?></h2>
 			<p class="description"><?php esc_html_e( 'Connections are per-user. Your tokens are never shared with other users on this site.', 'jot' ); ?></p>
@@ -140,10 +233,12 @@ class Jot_Connections_Page {
 				</thead>
 				<tbody>
 					<?php foreach ( jot_services() as $service ) :
-						$id         = $service->id();
-						$status     = $service->status( get_current_user_id() );
-						$configured = ! empty( $apps[ $id ]['client_id'] ) && ! empty( $apps[ $id ]['client_secret'] );
-						$connected  = ! empty( $status['connected'] );
+						$id             = $service->id();
+						$status         = $service->status( get_current_user_id() );
+						$is_credentials = $service instanceof Jot_Service_Credentials;
+						// Credential-based services don't need site-wide OAuth app configuration.
+						$configured     = $is_credentials || ( ! empty( $apps[ $id ]['client_id'] ) && ! empty( $apps[ $id ]['client_secret'] ) );
+						$connected      = ! empty( $status['connected'] );
 						?>
 						<tr>
 							<td><strong><?php echo esc_html( $service->label() ); ?></strong></td>
@@ -210,6 +305,10 @@ class Jot_Connections_Page {
 					<table class="form-table" role="presentation">
 						<tbody>
 							<?php foreach ( jot_services() as $service ) :
+								// Credential-based services (e.g. Bluesky) don't use a shared OAuth app.
+								if ( $service instanceof Jot_Service_Credentials ) {
+									continue;
+								}
 								$id       = $service->id();
 								$current  = isset( $apps[ $id ] ) && is_array( $apps[ $id ] ) ? $apps[ $id ] : array();
 								$callback = $service->callback_url();
