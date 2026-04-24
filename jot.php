@@ -70,6 +70,7 @@ function jot_activate(): void {
 					'mastodon' => array( 'enabled' => false ),
 					'bluesky'  => array( 'enabled' => false ),
 					'strava'   => array( 'enabled' => false ),
+					'todoist'  => array( 'enabled' => false ),
 					'spotify'  => array( 'enabled' => false ),
 				),
 			)
@@ -154,6 +155,7 @@ function jot_services(): array {
 		return $services;
 	}
 	$services = array();
+	foreach ( array( 'Jot_Service_Github', 'Jot_Service_Strava', 'Jot_Service_Todoist' ) as $class ) {
 	foreach ( array( 'Jot_Service_Github', 'Jot_Service_Strava', 'Jot_Service_Spotify' ) as $class ) {
 		if ( class_exists( $class ) ) {
 			/** @var Jot_Service $instance */
