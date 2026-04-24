@@ -99,6 +99,9 @@ function jot_boot_subsystems(): void {
 	if ( class_exists( 'Jot_Rest_Controller' ) ) {
 		Jot_Rest_Controller::boot();
 	}
+	if ( class_exists( 'Jot_Connections_Page' ) ) {
+		Jot_Connections_Page::boot();
+	}
 }
 
 add_action( 'wp_dashboard_setup', 'jot_register_dashboard_widget' );
