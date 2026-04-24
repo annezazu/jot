@@ -31,6 +31,8 @@ class Jot_Ai {
 	 * @param array<int, string>                                                            $recent_titles
 	 * @return array<int, array{title:string,rationale:string,angle_key:string,service:string,label:string,digest:string}>|WP_Error
 	 */
+	public const DEBUG_META = 'jot_ai_last_debug';
+
 	public static function generate_cards( array $digests, array $recent_titles, string $voice_hint ) {
 		if ( ! self::is_available() ) {
 			return new WP_Error( 'jot_ai_unavailable', __( 'No AI provider is configured.', 'jot' ) );
@@ -45,31 +47,47 @@ class Jot_Ai {
 			->as_json_response( Jot_Prompts::cards_schema() )
 			->generate_text();
 
+		self::record_debug(
+			array(
+				'at'     => time(),
+				'stage'  => 'cards',
+				'error'  => is_wp_error( $raw ) ? $raw->get_error_message() : '',
+				'raw'    => is_wp_error( $raw ) ? '' : substr( (string) $raw, 0, 2000 ),
+			)
+		);
+
 		if ( is_wp_error( $raw ) ) {
 			return $raw;
 		}
 
-		$decoded = json_decode( (string) $raw, true );
+		$decoded = self::extract_cards_list( json_decode( (string) $raw, true ) );
 		if ( ! is_array( $decoded ) ) {
 			return new WP_Error( 'jot_ai_parse', __( 'AI returned malformed JSON.', 'jot' ) );
 		}
 
-		$by_digest = array();
-		foreach ( $digests as $d ) {
-			$by_digest[] = $d;
-		}
+		$by_digest = array_values( $digests );
 
 		$cards = array();
 		foreach ( $decoded as $i => $item ) {
-			if ( ! is_array( $item ) || empty( $item['title'] ) || empty( $item['angle_key'] ) ) {
+			if ( ! is_array( $item ) ) {
 				continue;
 			}
-			// Pair cards with the originating digest (best effort: round-robin).
+
+			$title     = sanitize_text_field( (string) ( $item['title'] ?? '' ) );
+			$rationale = sanitize_textarea_field( (string) ( $item['rationale'] ?? '' ) );
+			$angle_key = sanitize_title( (string) ( $item['angle_key'] ?? '' ) );
+
+			// Skip cards where required fields are empty AFTER sanitization — these
+			// render as invisible cards in the widget and produce silent clicks.
+			if ( $title === '' || $angle_key === '' ) {
+				continue;
+			}
+
 			$origin = $by_digest[ $i % max( 1, count( $by_digest ) ) ];
 			$cards[] = array(
-				'title'     => sanitize_text_field( (string) $item['title'] ),
-				'rationale' => sanitize_textarea_field( (string) ( $item['rationale'] ?? '' ) ),
-				'angle_key' => sanitize_title( (string) $item['angle_key'] ),
+				'title'     => $title,
+				'rationale' => $rationale,
+				'angle_key' => $angle_key,
 				'service'   => $origin['service'],
 				'label'     => $origin['label'],
 				'digest'    => $origin['digest'],
@@ -77,6 +95,51 @@ class Jot_Ai {
 		}
 
 		return $cards;
+	}
+
+	/**
+	 * Accept both `[...]` and wrapped shapes like `{"cards":[...]}` or
+	 * `{"suggestions":[...]}` that some providers return even with schema hints.
+	 *
+	 * @param mixed $decoded
+	 * @return array<int, mixed>|null
+	 */
+	private static function extract_cards_list( $decoded ): ?array {
+		if ( ! is_array( $decoded ) ) {
+			return null;
+		}
+		// Sequential array already.
+		if ( array_is_list( $decoded ) ) {
+			return $decoded;
+		}
+		// Wrapped. Pick the first list-valued property.
+		foreach ( $decoded as $value ) {
+			if ( is_array( $value ) && array_is_list( $value ) ) {
+				return $value;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * @param array<string, mixed> $debug
+	 */
+	private static function record_debug( array $debug ): void {
+		$user_id = get_current_user_id();
+		if ( $user_id === 0 ) {
+			// Cron runs with no user. Stash on the first user that has connections
+			// — debug is admin-only, so this is fine.
+			global $wpdb;
+			$row = $wpdb->get_row(
+				"SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key LIKE 'jot_oauth_tokens_%' LIMIT 1",
+				ARRAY_A
+			);
+			$user_id = isset( $row['user_id'] ) ? (int) $row['user_id'] : 0;
+		}
+		if ( $user_id === 0 ) {
+			return;
+		}
+		update_user_meta( $user_id, self::DEBUG_META, $debug );
 	}
 
 	/**

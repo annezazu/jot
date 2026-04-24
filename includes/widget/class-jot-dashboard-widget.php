@@ -142,6 +142,27 @@ class Jot_Dashboard_Widget {
 				<?php endif; ?>
 			</section>
 
+			<?php if ( current_user_can( 'manage_options' ) && class_exists( 'Jot_Ai' ) ) :
+				$debug = (array) get_user_meta( $user_id, Jot_Ai::DEBUG_META, true );
+				if ( ! empty( $debug ) ) :
+					?>
+					<details class="jot-widget__debug">
+						<summary><?php esc_html_e( 'AI debug (admin only)', 'jot' ); ?></summary>
+						<p class="jot-widget__muted">
+							<?php if ( ! empty( $debug['error'] ) ) : ?>
+								<strong><?php esc_html_e( 'Error:', 'jot' ); ?></strong>
+								<?php echo esc_html( (string) $debug['error'] ); ?>
+							<?php else : ?>
+								<strong><?php esc_html_e( 'Last raw response:', 'jot' ); ?></strong>
+							<?php endif; ?>
+						</p>
+						<?php if ( ! empty( $debug['raw'] ) ) : ?>
+							<pre style="white-space:pre-wrap;max-height:200px;overflow:auto;font-size:11px;background:#f6f7f7;padding:8px;"><?php echo esc_html( (string) $debug['raw'] ); ?></pre>
+						<?php endif; ?>
+					</details>
+				<?php endif; ?>
+			<?php endif; ?>
+
 			<footer class="jot-widget__footer" aria-live="polite">
 				<span class="jot-widget__muted jot-widget__refreshed">
 					<?php
