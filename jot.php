@@ -68,10 +68,11 @@ function jot_activate(): void {
 				'services'         => array(
 					'github'   => array( 'enabled' => false ),
 					'mastodon' => array( 'enabled' => false ),
-					'bluesky'  => array( 'enabled' => false ),
-					'strava'   => array( 'enabled' => false ),
-					'todoist'  => array( 'enabled' => false ),
-					'spotify'  => array( 'enabled' => false ),
+					'bluesky'        => array( 'enabled' => false ),
+					'strava'         => array( 'enabled' => false ),
+					'todoist'        => array( 'enabled' => false ),
+					'spotify'        => array( 'enabled' => false ),
+					'googlecalendar' => array( 'enabled' => false ),
 				),
 			)
 		);
@@ -155,7 +156,7 @@ function jot_services(): array {
 		return $services;
 	}
 	$services = array();
-	foreach ( array( 'Jot_Service_Github', 'Jot_Service_Strava', 'Jot_Service_Spotify', 'Jot_Service_Todoist' ) as $class ) {
+	foreach ( array( 'Jot_Service_Github', 'Jot_Service_Strava', 'Jot_Service_Spotify', 'Jot_Service_Todoist', 'Jot_Service_GoogleCalendar' ) as $class ) {
 		if ( class_exists( $class ) ) {
 			/** @var Jot_Service $instance */
 			$instance                   = new $class();
