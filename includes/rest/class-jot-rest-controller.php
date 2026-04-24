@@ -69,6 +69,28 @@ class Jot_Rest_Controller {
 				),
 			)
 		);
+
+		register_rest_route(
+			self::NAMESPACE,
+			'/render',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( __CLASS__, 'render' ),
+				'permission_callback' => array( __CLASS__, 'can_use' ),
+			)
+		);
+	}
+
+	public static function render(): WP_REST_Response {
+		ob_start();
+		( new Jot_Dashboard_Widget() )->render();
+		return new WP_REST_Response(
+			array(
+				'ok'   => true,
+				'html' => (string) ob_get_clean(),
+			),
+			200
+		);
 	}
 
 	public static function can_use(): bool {

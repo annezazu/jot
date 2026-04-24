@@ -66,10 +66,15 @@ class Jot_Ai {
 			return new WP_Error( 'jot_ai_parse', __( 'AI returned malformed JSON.', 'jot' ) );
 		}
 
-		$by_digest = array_values( $digests );
+		// Build a map of service_id => digest entry so we can resolve labels +
+		// assemble the source digests for each card without round-robin fakery.
+		$by_service = array();
+		foreach ( $digests as $d ) {
+			$by_service[ (string) $d['service'] ] = $d;
+		}
 
 		$cards = array();
-		foreach ( $decoded as $i => $item ) {
+		foreach ( $decoded as $item ) {
 			if ( ! is_array( $item ) ) {
 				continue;
 			}
@@ -84,14 +89,42 @@ class Jot_Ai {
 				continue;
 			}
 
-			$origin = $by_digest[ $i % max( 1, count( $by_digest ) ) ];
+			// Resolve the card's sources. Honor the AI's claim when it matches a
+			// real connected service; otherwise fall back to all services (better
+			// than a lie about a single service).
+			$claimed = is_array( $item['sources'] ?? null )
+				? array_values( array_filter( array_map( 'strval', $item['sources'] ) ) )
+				: array();
+			$services = array();
+			$labels   = array();
+			$digests_used = array();
+			foreach ( $claimed as $service_id ) {
+				if ( isset( $by_service[ $service_id ] ) && ! in_array( $service_id, $services, true ) ) {
+					$services[]    = $service_id;
+					$labels[]      = (string) $by_service[ $service_id ]['label'];
+					$digests_used[] = (string) $by_service[ $service_id ]['digest'];
+				}
+			}
+			if ( empty( $services ) ) {
+				// Fallback: claim every connected service so we don't fib about the origin.
+				foreach ( $by_service as $id => $entry ) {
+					$services[]     = $id;
+					$labels[]       = (string) $entry['label'];
+					$digests_used[] = (string) $entry['digest'];
+				}
+			}
+
 			$cards[] = array(
 				'title'     => $title,
 				'rationale' => $rationale,
 				'angle_key' => $angle_key,
-				'service'   => $origin['service'],
-				'label'     => $origin['label'],
-				'digest'    => $origin['digest'],
+				'services'  => $services,
+				'labels'    => $labels,
+				// `service` + `label` retained for backward compatibility with widget
+				// and REST lookups that pre-date the sources field.
+				'service'   => $services[0],
+				'label'     => $labels[0],
+				'digest'    => implode( "\n", $digests_used ),
 			);
 		}
 

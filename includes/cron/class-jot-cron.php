@@ -19,12 +19,13 @@ class Jot_Cron {
 	public const USER_DIGESTS_META     = 'jot_digests';
 	public const USER_CARDS_META       = 'jot_suggestion_cards';
 	public const USER_LAST_REFRESH     = 'jot_last_refresh';
+	public const USER_AI_ERROR_META    = 'jot_last_ai_error';
 	public const USER_ACTED_ON_META    = 'jot_user_acted_on';
 	public const USER_DISMISSED_META   = 'jot_user_dismissed';
 	public const MANUAL_LOCK_TRANSIENT = 'jot_manual_refresh_lock_';
 
 	public const WINDOW_SECONDS    = 7 * DAY_IN_SECONDS;
-	public const MANUAL_DEBOUNCE   = 5 * MINUTE_IN_SECONDS;
+	public const MANUAL_DEBOUNCE   = MINUTE_IN_SECONDS;
 	public const DISMISS_TTL       = 7 * DAY_IN_SECONDS;
 	public const RECENT_TITLE_LIMIT = 20;
 
@@ -88,13 +89,17 @@ class Jot_Cron {
 			if ( is_array( $cards ) ) {
 				$cards = self::filter_suppressed( $user_id, $cards );
 				update_user_meta( $user_id, self::USER_CARDS_META, $cards );
+				delete_user_meta( $user_id, self::USER_AI_ERROR_META );
 			} else {
 				// AI call errored: clear any stale cards so the widget falls back
-				// to digests instead of rendering yesterday's cards.
+				// to digests, and record the error for widget display.
 				delete_user_meta( $user_id, self::USER_CARDS_META );
+				$message = $cards instanceof WP_Error ? $cards->get_error_message() : '';
+				update_user_meta( $user_id, self::USER_AI_ERROR_META, $message !== '' ? $message : 'unknown' );
 			}
 		} else {
 			delete_user_meta( $user_id, self::USER_CARDS_META );
+			delete_user_meta( $user_id, self::USER_AI_ERROR_META );
 		}
 
 		update_user_meta( $user_id, self::USER_LAST_REFRESH, time() );
