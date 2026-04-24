@@ -23,6 +23,25 @@ class Jot_Service_Strava extends Jot_Service_OAuth2 {
 		$this->access_token_url = 'https://www.strava.com/oauth/token';
 		$this->scope            = 'read,activity:read';
 		$this->auth_header_type = 'Bearer';
+
+		// Strava requires approval_prompt and expects literal commas in scope
+		// (http_build_query url-encodes them, which Strava rejects silently).
+		add_filter( 'jot_strava_authorize_params', array( $this, 'tune_authorize_params' ) );
+		add_filter( 'jot_strava_authorize_url',    array( $this, 'tune_authorize_url' ) );
+	}
+
+	/**
+	 * @param array<string, string> $params
+	 * @return array<string, string>
+	 */
+	public function tune_authorize_params( array $params ): array {
+		$params['approval_prompt'] = 'auto';
+		unset( $params['scope'] ); // Handled in tune_authorize_url to preserve literal commas.
+		return $params;
+	}
+
+	public function tune_authorize_url( string $url ): string {
+		return $url . '&scope=' . $this->scope;
 	}
 
 	public function id(): string {

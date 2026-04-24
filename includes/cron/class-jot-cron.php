@@ -88,6 +88,10 @@ class Jot_Cron {
 			if ( is_array( $cards ) ) {
 				$cards = self::filter_suppressed( $user_id, $cards );
 				update_user_meta( $user_id, self::USER_CARDS_META, $cards );
+			} else {
+				// AI call errored: clear any stale cards so the widget falls back
+				// to digests instead of rendering yesterday's cards.
+				delete_user_meta( $user_id, self::USER_CARDS_META );
 			}
 		} else {
 			delete_user_meta( $user_id, self::USER_CARDS_META );

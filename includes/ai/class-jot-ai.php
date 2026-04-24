@@ -42,17 +42,18 @@ class Jot_Ai {
 		}
 
 		$prompt = Jot_Prompts::cards( $digests, $recent_titles, $voice_hint );
-		$raw    = wp_ai_client_prompt( $prompt )
-			->using_temperature( 0.7 )
-			->as_json_response( Jot_Prompts::cards_schema() )
-			->generate_text();
+		// Intentionally simple: plain generate_text() works across all providers.
+		// Some providers (e.g. Gemini) don't advertise the structured-output
+		// capability that as_json_response() requires, causing "No models found"
+		// errors. We ask for JSON in the prompt and parse it ourselves.
+		$raw = wp_ai_client_prompt( $prompt )->generate_text();
 
 		self::record_debug(
 			array(
-				'at'     => time(),
-				'stage'  => 'cards',
-				'error'  => is_wp_error( $raw ) ? $raw->get_error_message() : '',
-				'raw'    => is_wp_error( $raw ) ? '' : substr( (string) $raw, 0, 2000 ),
+				'at'    => time(),
+				'stage' => 'cards',
+				'error' => is_wp_error( $raw ) ? $raw->get_error_message() : '',
+				'raw'   => is_wp_error( $raw ) ? '' : substr( (string) $raw, 0, 2000 ),
 			)
 		);
 
@@ -60,7 +61,7 @@ class Jot_Ai {
 			return $raw;
 		}
 
-		$decoded = self::extract_cards_list( json_decode( (string) $raw, true ) );
+		$decoded = self::extract_cards_list( self::decode_json_lenient( (string) $raw ) );
 		if ( ! is_array( $decoded ) ) {
 			return new WP_Error( 'jot_ai_parse', __( 'AI returned malformed JSON.', 'jot' ) );
 		}
@@ -122,6 +123,36 @@ class Jot_Ai {
 	}
 
 	/**
+	 * Parse JSON from a model response that may include prose preamble or
+	 * ```json``` code fences.
+	 *
+	 * @return array<mixed>|null
+	 */
+	private static function decode_json_lenient( string $text ): ?array {
+		$text = trim( $text );
+		if ( $text === '' ) {
+			return null;
+		}
+		// Strip common markdown code fences.
+		$text = preg_replace( '/^```(?:json)?\s*/i', '', $text );
+		$text = preg_replace( '/\s*```\s*$/', '', (string) $text );
+		$text = trim( (string) $text );
+
+		$decoded = json_decode( $text, true );
+		if ( is_array( $decoded ) ) {
+			return $decoded;
+		}
+		// Last resort: extract the first {...} or [...] substring.
+		if ( preg_match( '/(\{.*\}|\[.*\])/s', $text, $m ) ) {
+			$decoded = json_decode( $m[1], true );
+			if ( is_array( $decoded ) ) {
+				return $decoded;
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * @param array<string, mixed> $debug
 	 */
 	private static function record_debug( array $debug ): void {
@@ -153,24 +184,23 @@ class Jot_Ai {
 			return new WP_Error( 'jot_ai_unavailable', __( 'No AI provider is configured.', 'jot' ) );
 		}
 
-		$temperature = match ( $tier ) {
-			Jot_Prompts::TIER_SPARK   => 0.6,
-			Jot_Prompts::TIER_OUTLINE => 0.5,
-			Jot_Prompts::TIER_FULL    => 0.7,
-			default                   => 0.5,
-		};
-
 		$prompt = Jot_Prompts::tier( $tier, $card, $voice_hint );
-		$raw    = wp_ai_client_prompt( $prompt )
-			->using_temperature( $temperature )
-			->as_json_response( Jot_Prompts::schema( $tier ) )
-			->generate_text();
+		$raw    = wp_ai_client_prompt( $prompt )->generate_text();
+
+		self::record_debug(
+			array(
+				'at'    => time(),
+				'stage' => 'tier:' . $tier,
+				'error' => is_wp_error( $raw ) ? $raw->get_error_message() : '',
+				'raw'   => is_wp_error( $raw ) ? '' : substr( (string) $raw, 0, 2000 ),
+			)
+		);
 
 		if ( is_wp_error( $raw ) ) {
 			return $raw;
 		}
 
-		$data = json_decode( (string) $raw, true );
+		$data = self::decode_json_lenient( (string) $raw );
 		if ( ! is_array( $data ) || empty( $data['title'] ) ) {
 			return new WP_Error( 'jot_ai_parse', __( 'AI returned malformed JSON.', 'jot' ) );
 		}
