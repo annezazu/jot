@@ -38,8 +38,10 @@ class Jot_Dashboard_Widget {
 		$settings_url       = admin_url( 'admin.php?page=jot-settings' );
 		$connections_url    = admin_url( 'admin.php?page=jot-connections' );
 		$drafts             = $this->get_jot_drafts();
+		$cards              = (array) get_user_meta( $user_id, Jot_Cron::USER_CARDS_META, true );
 		$digests            = (array) get_user_meta( $user_id, Jot_Cron::USER_DIGESTS_META, true );
 		$last_refresh       = (int) get_user_meta( $user_id, Jot_Cron::USER_LAST_REFRESH, true );
+		$ai_available       = class_exists( 'Jot_Ai' ) && Jot_Ai::is_available();
 
 		?>
 		<div class="jot-widget"
@@ -70,11 +72,32 @@ class Jot_Dashboard_Widget {
 							</a>
 						</p>
 					</div>
+				<?php elseif ( ! empty( $cards ) ) : ?>
+					<ul class="jot-widget__digests">
+						<?php foreach ( $cards as $card ) : ?>
+							<li class="jot-widget__card" data-angle-key="<?php echo esc_attr( (string) ( $card['angle_key'] ?? '' ) ); ?>">
+								<button type="button" class="jot-widget__dismiss" aria-label="<?php esc_attr_e( 'Dismiss this suggestion', 'jot' ); ?>">×</button>
+								<div class="jot-widget__card-title">
+									<span class="jot-widget__card-badge"><?php echo esc_html( (string) ( $card['label'] ?? '' ) ); ?></span>
+									<strong><?php echo esc_html( (string) ( $card['title'] ?? '' ) ); ?></strong>
+								</div>
+								<p class="jot-widget__card-digest"><?php echo esc_html( (string) ( $card['rationale'] ?? '' ) ); ?></p>
+								<div class="jot-widget__card-actions">
+									<button type="button" class="button jot-widget__tier" data-tier="spark"><?php esc_html_e( 'Quick spark', 'jot' ); ?></button>
+									<button type="button" class="button jot-widget__tier" data-tier="outline"><?php esc_html_e( 'Outline', 'jot' ); ?></button>
+									<button type="button" class="button button-primary jot-widget__tier" data-tier="full"><?php esc_html_e( 'Full draft', 'jot' ); ?></button>
+								</div>
+							</li>
+						<?php endforeach; ?>
+					</ul>
 				<?php elseif ( empty( $digests ) ) : ?>
 					<div class="jot-widget__empty">
 						<p><?php esc_html_e( 'No recent activity yet. Refresh to check now, or wait for the next daily update.', 'jot' ); ?></p>
 					</div>
 				<?php else : ?>
+					<?php if ( ! $ai_available ) : ?>
+						<p class="jot-widget__muted"><?php esc_html_e( 'Connect an AI provider to get titled suggestions instead of raw digests.', 'jot' ); ?></p>
+					<?php endif; ?>
 					<ul class="jot-widget__digests">
 						<?php foreach ( $digests as $entry ) : ?>
 							<li class="jot-widget__card" data-angle-key="<?php echo esc_attr( (string) ( $entry['angle_key'] ?? '' ) ); ?>">

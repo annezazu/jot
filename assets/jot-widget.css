@@ -74,6 +74,36 @@
 	border: 1px solid #f0f0f1;
 	border-radius: 4px;
 	margin-bottom: 8px;
+	position: relative;
+}
+
+.jot-widget__card-badge {
+	display: inline-block;
+	font-size: 11px;
+	padding: 1px 6px;
+	margin-right: 6px;
+	border-radius: 3px;
+	background: #f0f0f1;
+	color: #50575e;
+	vertical-align: 2px;
+}
+
+.jot-widget__dismiss {
+	position: absolute;
+	top: 4px;
+	right: 6px;
+	background: transparent;
+	border: 0;
+	font-size: 18px;
+	line-height: 1;
+	padding: 2px 6px;
+	color: #787c82;
+	cursor: pointer;
+}
+
+.jot-widget__dismiss:hover,
+.jot-widget__dismiss:focus {
+	color: #1d2327;
 }
 
 .jot-widget__card-title {

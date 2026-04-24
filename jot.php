@@ -37,8 +37,8 @@ spl_autoload_register(
 			JOT_PLUGIN_DIR . 'includes/admin/' . $file,
 			JOT_PLUGIN_DIR . 'includes/cron/' . $file,
 			JOT_PLUGIN_DIR . 'includes/rest/' . $file,
-			JOT_PLUGIN_DIR . 'includes/ai/' . $file,
 			JOT_PLUGIN_DIR . 'includes/signals/' . $file,
+			JOT_PLUGIN_DIR . 'includes/ai/' . $file,
 			JOT_PLUGIN_DIR . 'includes/services/' . $file,
 			JOT_PLUGIN_DIR . 'includes/oauth/' . $file,
 		);
