@@ -114,6 +114,97 @@ function jot_register_admin_pages(): void {
 	$settings->register();
 }
 
+/**
+ * Service registry.
+ *
+ * @return array<string, Jot_Service>
+ */
+function jot_services(): array {
+	static $services = null;
+	if ( $services !== null ) {
+		return $services;
+	}
+	$services = array();
+	foreach ( array( 'Jot_Service_Github' ) as $class ) {
+		if ( class_exists( $class ) ) {
+			/** @var Jot_Service $instance */
+			$instance                   = new $class();
+			$services[ $instance->id() ] = $instance;
+		}
+	}
+	return $services;
+}
+
+/**
+ * Services the current user has connected.
+ *
+ * @return array<int, array{id:string,label:string,user:string}>
+ */
+function jot_get_connected_services( ?int $user_id = null ): array {
+	$user_id = $user_id ?? get_current_user_id();
+	if ( $user_id === 0 ) {
+		return array();
+	}
+	$out = array();
+	foreach ( jot_services() as $service ) {
+		$status = $service->status( $user_id );
+		if ( ! empty( $status['connected'] ) ) {
+			$out[] = array(
+				'id'    => $service->id(),
+				'label' => $service->label(),
+				'user'  => (string) ( $status['user'] ?? '' ),
+			);
+		}
+	}
+	return $out;
+}
+
+/**
+ * Is an AI provider configured via the WP 7.0 Connectors API?
+ */
+function jot_ai_is_available(): bool {
+	if ( ! function_exists( 'wp_get_connectors' ) ) {
+		return false;
+	}
+	foreach ( (array) wp_get_connectors() as $connector ) {
+		if ( ( $connector['type'] ?? '' ) === 'ai_provider' ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Dispatch OAuth callbacks for any registered service.
+ */
+add_action( 'admin_init', 'jot_dispatch_oauth_callback' );
+function jot_dispatch_oauth_callback(): void {
+	if ( empty( $_GET['page'] ) || $_GET['page'] !== 'jot-connections' ) {
+		return;
+	}
+	if ( empty( $_GET['jot_oauth_callback'] ) && empty( $_GET['jot_oauth_start'] ) ) {
+		return;
+	}
+	if ( ! is_user_logged_in() ) {
+		return;
+	}
+
+	$services = jot_services();
+
+	if ( ! empty( $_GET['jot_oauth_start'] ) ) {
+		$id = sanitize_key( (string) wp_unslash( $_GET['jot_oauth_start'] ) );
+		if ( isset( $services[ $id ] ) ) {
+			$services[ $id ]->connect();
+		}
+		return;
+	}
+
+	$id = sanitize_key( (string) wp_unslash( $_GET['jot_oauth_callback'] ) );
+	if ( isset( $services[ $id ] ) ) {
+		$services[ $id ]->handle_callback();
+	}
+}
+
 add_action( 'admin_enqueue_scripts', 'jot_enqueue_widget_assets' );
 function jot_enqueue_widget_assets( string $hook ): void {
 	if ( $hook !== 'index.php' ) {

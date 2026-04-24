@@ -72,3 +72,8 @@
 	background: #f0f0f1;
 	color: #50575e;
 }
+
+.jot-status--connected {
+	background: #edfaef;
+	color: #007017;
+}
