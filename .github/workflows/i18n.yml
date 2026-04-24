@@ -1,0 +1,35 @@
+name: i18n
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pot-is-fresh:
+    name: languages/jot.pot is up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: wp-cli
+          coverage: none
+
+      - name: Regenerate .pot
+        run: |
+          wp i18n make-pot . languages/jot.pot \
+            --domain=jot \
+            --exclude=docs,tests,bin,.github,node_modules
+
+      - name: Fail if the committed .pot drifted
+        run: |
+          if ! git diff --quiet -- languages/jot.pot; then
+            echo "::error::languages/jot.pot is out of date. Run 'wp i18n make-pot . languages/jot.pot --domain=jot --exclude=docs,tests,bin,.github,node_modules' locally and commit the result."
+            git --no-pager diff -- languages/jot.pot | head -80
+            exit 1
+          fi
