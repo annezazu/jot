@@ -2,12 +2,18 @@
 /**
  * Todoist service adapter.
  *
- * OAuth2 with a long-lived access token (no refresh token). We fetch the
- * user's recently completed tasks via the Sync API.
+ * OAuth2 with a long-lived access token (no refresh token). All requests
+ * go to Todoist's unified /api/v1/ endpoints — the older /sync/v9/* and
+ * /rest/v2/* prefixes were retired and now return HTTP 410.
+ *
+ * For Premium accounts we ask /api/v1/sync/completed/get_all for the
+ * completed-tasks history. For Free accounts that endpoint returns an
+ * error, so we fall back to /api/v1/tasks (active tasks) — a different
+ * but still useful "what's on your plate" signal.
  *
  * Docs:
  *   https://developer.todoist.com/guides/#authorization
- *   https://developer.todoist.com/sync/v9/#get-all-completed-items
+ *   https://developer.todoist.com/api/v1/
  *
  * @package Jot
  */
@@ -39,7 +45,7 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 		// Todoist has no dedicated "me" endpoint; the Sync API returns the user
 		// object when we request the "user" resource with sync_token=*.
 		$response = wp_remote_post(
-			'https://api.todoist.com/sync/v9/sync',
+			'https://api.todoist.com/api/v1/sync',
 			array(
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $access_token,
@@ -79,7 +85,7 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 		// Try the completed-tasks endpoint first (Premium-only; Free accounts get
 		// an error and fall through to active tasks).
 		$completed = $this->authed_post(
-			'https://api.todoist.com/sync/v9/completed/get_all',
+			'https://api.todoist.com/api/v1/sync/completed/get_all',
 			array(
 				'since' => gmdate( 'Y-m-d\TH:i:s', $since ),
 				'limit' => 200,
@@ -138,18 +144,22 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 	 * @return array<int, array<string, mixed>>
 	 */
 	private function fetch_active( int $user_id, array &$trace ): array {
-		$tasks = $this->traced_get( 'https://api.todoist.com/rest/v2/tasks', $user_id, $trace );
-		if ( is_wp_error( $tasks ) || ! is_array( $tasks ) || empty( $tasks ) ) {
+		$tasks_raw = $this->traced_get( 'https://api.todoist.com/api/v1/tasks', $user_id, $trace );
+		if ( is_wp_error( $tasks_raw ) ) {
+			return array();
+		}
+		// /api/v1/ endpoints return either a flat array (REST-style) or a
+		// paginated envelope { "results": [...], "next_cursor": ... }.
+		$tasks = self::unwrap_list( $tasks_raw );
+		if ( empty( $tasks ) ) {
 			return array();
 		}
 
-		$projects_raw = $this->traced_get( 'https://api.todoist.com/rest/v2/projects', $user_id, $trace );
+		$projects_raw = $this->traced_get( 'https://api.todoist.com/api/v1/projects', $user_id, $trace );
 		$projects     = array();
-		if ( is_array( $projects_raw ) ) {
-			foreach ( $projects_raw as $project ) {
-				if ( is_array( $project ) && ! empty( $project['id'] ) && ! empty( $project['name'] ) ) {
-					$projects[ (string) $project['id'] ] = (string) $project['name'];
-				}
+		foreach ( self::unwrap_list( $projects_raw ) as $project ) {
+			if ( is_array( $project ) && ! empty( $project['id'] ) && ! empty( $project['name'] ) ) {
+				$projects[ (string) $project['id'] ] = (string) $project['name'];
 			}
 		}
 
@@ -250,6 +260,22 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 
 		$decoded = json_decode( (string) wp_remote_retrieve_body( $response ), true );
 		return is_array( $decoded ) ? $decoded : array();
+	}
+
+	/**
+	 * Accept either a flat array or a paginated `{ "results": [...] }` envelope.
+	 *
+	 * @param mixed $response
+	 * @return array<int, mixed>
+	 */
+	private static function unwrap_list( $response ): array {
+		if ( ! is_array( $response ) ) {
+			return array();
+		}
+		if ( isset( $response['results'] ) && is_array( $response['results'] ) ) {
+			return $response['results'];
+		}
+		return $response;
 	}
 
 	private function add_trace( ?array &$trace, string $method, string $url, int $status, string $error, string $body_excerpt ): void {
