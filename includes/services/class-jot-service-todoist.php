@@ -72,15 +72,18 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 	}
 
 	public function fetch_recent( int $since, int $user_id ): array {
-		$url = add_query_arg(
+		// Todoist Sync API endpoints — including completed/get_all — require POST,
+		// not GET. A GET silently 4xx's, which our base authed_get converts to a
+		// WP_Error and we treat as "no events" → invisible service. Use a direct
+		// POST with the form-encoded body Todoist expects.
+		$response = $this->authed_post(
+			'https://api.todoist.com/sync/v9/completed/get_all',
 			array(
 				'since' => gmdate( 'Y-m-d\TH:i:s', $since ),
 				'limit' => 200,
 			),
-			'https://api.todoist.com/sync/v9/completed/get_all'
+			$user_id
 		);
-
-		$response = $this->authed_get( $url, $user_id );
 		if ( is_wp_error( $response ) || ! is_array( $response ) || empty( $response['items'] ) || ! is_array( $response['items'] ) ) {
 			return array();
 		}
@@ -111,5 +114,42 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 			);
 		}
 		return $out;
+	}
+
+	/**
+	 * Authenticated POST against the Todoist Sync API.
+	 *
+	 * @param array<string, scalar> $body
+	 * @return array<mixed>|WP_Error
+	 */
+	private function authed_post( string $url, array $body, int $user_id ) {
+		$token = $this->get_token( $user_id );
+		if ( ! $token ) {
+			return new WP_Error( 'jot_not_connected', __( 'Not connected.', 'jot' ) );
+		}
+
+		$response = wp_remote_post(
+			$url,
+			array(
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $token['access_token'],
+					'Accept'        => 'application/json',
+					'User-Agent'    => 'Jot/' . JOT_VERSION . '; ' . home_url(),
+				),
+				'body'    => $body,
+				'timeout' => 15,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return $response;
+		}
+		$status = (int) wp_remote_retrieve_response_code( $response );
+		if ( $status < 200 || $status >= 300 ) {
+			return new WP_Error( 'jot_http_' . $status, (string) wp_remote_retrieve_body( $response ) );
+		}
+
+		$decoded = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+		return is_array( $decoded ) ? $decoded : array();
 	}
 }
