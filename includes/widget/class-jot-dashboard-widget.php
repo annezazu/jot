@@ -233,13 +233,12 @@ class Jot_Dashboard_Widget {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
-		$debug   = class_exists( 'Jot_Ai' ) ? jot_get_user_array( $user_id, Jot_Ai::DEBUG_META ) : array();
-		$digests = jot_get_user_array( $user_id, Jot_Cron::USER_DIGESTS_META );
-		if ( empty( $debug ) && empty( $digests ) ) {
+		$debug         = class_exists( 'Jot_Ai' ) ? jot_get_user_array( $user_id, Jot_Ai::DEBUG_META ) : array();
+		$digests       = jot_get_user_array( $user_id, Jot_Cron::USER_DIGESTS_META );
+		$todoist_trace = class_exists( 'Jot_Service_Todoist' ) ? jot_get_user_array( $user_id, Jot_Service_Todoist::TRACE_META ) : array();
+		if ( empty( $debug ) && empty( $digests ) && empty( $todoist_trace ) ) {
 			return;
 		}
-		?>
-		$todoist_trace = class_exists( 'Jot_Service_Todoist' ) ? jot_get_user_array( $user_id, Jot_Service_Todoist::TRACE_META ) : array();
 		?>
 		<details class="jot-widget__debug">
 			<summary><?php esc_html_e( 'Jot debug (admin only)', 'jot' ); ?></summary>
