@@ -239,8 +239,28 @@ class Jot_Dashboard_Widget {
 			return;
 		}
 		?>
+		$todoist_trace = class_exists( 'Jot_Service_Todoist' ) ? jot_get_user_array( $user_id, Jot_Service_Todoist::TRACE_META ) : array();
+		?>
 		<details class="jot-widget__debug">
 			<summary><?php esc_html_e( 'Jot debug (admin only)', 'jot' ); ?></summary>
+
+			<?php if ( ! empty( $todoist_trace['attempts'] ) ) : ?>
+				<p class="jot-widget__muted"><strong><?php esc_html_e( 'Todoist fetch attempts:', 'jot' ); ?></strong></p>
+				<ul class="jot-widget__debug-digests">
+					<?php foreach ( (array) $todoist_trace['attempts'] as $attempt ) : ?>
+						<li>
+							<code><?php echo esc_html( (string) ( $attempt['method'] ?? '' ) . ' ' . (string) ( $attempt['status'] ?? '' ) ); ?></code>
+							<?php echo esc_html( (string) ( $attempt['url'] ?? '' ) ); ?>
+							<?php if ( ! empty( $attempt['error'] ) ) : ?>
+								— <em><?php echo esc_html( (string) $attempt['error'] ); ?></em>
+							<?php endif; ?>
+							<?php if ( ! empty( $attempt['body'] ) ) : ?>
+								<pre class="jot-widget__debug-pre"><?php echo esc_html( (string) $attempt['body'] ); ?></pre>
+							<?php endif; ?>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endif; ?>
 
 			<?php if ( ! empty( $digests ) ) : ?>
 				<p class="jot-widget__muted">

@@ -18,6 +18,8 @@ defined( 'ABSPATH' ) || exit;
 
 class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 
+	public const TRACE_META = 'jot_todoist_trace';
+
 	public function __construct() {
 		$this->authorize_url    = 'https://todoist.com/oauth/authorize';
 		$this->access_token_url = 'https://todoist.com/oauth/access_token';
@@ -72,22 +74,27 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 	}
 
 	public function fetch_recent( int $since, int $user_id ): array {
-		// Try the completed-tasks endpoint first. This is Premium-only; for Free
-		// accounts Todoist returns an error and we fall back to the user's active
-		// tasks (a different but still useful signal — "what's on your plate").
+		$trace = array( 'at' => time(), 'attempts' => array() );
+
+		// Try the completed-tasks endpoint first (Premium-only; Free accounts get
+		// an error and fall through to active tasks).
 		$completed = $this->authed_post(
 			'https://api.todoist.com/sync/v9/completed/get_all',
 			array(
 				'since' => gmdate( 'Y-m-d\TH:i:s', $since ),
 				'limit' => 200,
 			),
-			$user_id
+			$user_id,
+			$trace
 		);
 		if ( is_array( $completed ) && ! empty( $completed['items'] ) && is_array( $completed['items'] ) ) {
+			update_user_meta( $user_id, self::TRACE_META, $trace );
 			return $this->shape_completed( $completed );
 		}
 
-		return $this->fetch_active( $user_id );
+		$active = $this->fetch_active( $user_id, $trace );
+		update_user_meta( $user_id, self::TRACE_META, $trace );
+		return $active;
 	}
 
 	/**
@@ -130,13 +137,13 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 	 *
 	 * @return array<int, array<string, mixed>>
 	 */
-	private function fetch_active( int $user_id ): array {
-		$tasks = $this->authed_get( 'https://api.todoist.com/rest/v2/tasks', $user_id );
+	private function fetch_active( int $user_id, array &$trace ): array {
+		$tasks = $this->traced_get( 'https://api.todoist.com/rest/v2/tasks', $user_id, $trace );
 		if ( is_wp_error( $tasks ) || ! is_array( $tasks ) || empty( $tasks ) ) {
 			return array();
 		}
 
-		$projects_raw = $this->authed_get( 'https://api.todoist.com/rest/v2/projects', $user_id );
+		$projects_raw = $this->traced_get( 'https://api.todoist.com/rest/v2/projects', $user_id, $trace );
 		$projects     = array();
 		if ( is_array( $projects_raw ) ) {
 			foreach ( $projects_raw as $project ) {
@@ -169,9 +176,10 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 	 * @param array<string, scalar> $body
 	 * @return array<mixed>|WP_Error
 	 */
-	private function authed_post( string $url, array $body, int $user_id ) {
+	private function authed_post( string $url, array $body, int $user_id, ?array &$trace = null ) {
 		$token = $this->get_token( $user_id );
 		if ( ! $token ) {
+			$this->add_trace( $trace, 'POST', $url, 0, 'not_connected', '' );
 			return new WP_Error( 'jot_not_connected', __( 'Not connected.', 'jot' ) );
 		}
 
@@ -189,14 +197,71 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 		);
 
 		if ( is_wp_error( $response ) ) {
+			$this->add_trace( $trace, 'POST', $url, 0, $response->get_error_message(), '' );
 			return $response;
 		}
 		$status = (int) wp_remote_retrieve_response_code( $response );
+		$body_excerpt = substr( (string) wp_remote_retrieve_body( $response ), 0, 500 );
+		$this->add_trace( $trace, 'POST', $url, $status, '', $body_excerpt );
+
 		if ( $status < 200 || $status >= 300 ) {
 			return new WP_Error( 'jot_http_' . $status, (string) wp_remote_retrieve_body( $response ) );
 		}
 
 		$decoded = json_decode( (string) wp_remote_retrieve_body( $response ), true );
 		return is_array( $decoded ) ? $decoded : array();
+	}
+
+	/**
+	 * GET wrapper that records the response into the trace ref.
+	 *
+	 * @return array<mixed>|WP_Error
+	 */
+	private function traced_get( string $url, int $user_id, array &$trace ) {
+		$token = $this->get_token( $user_id );
+		if ( ! $token ) {
+			$this->add_trace( $trace, 'GET', $url, 0, 'not_connected', '' );
+			return new WP_Error( 'jot_not_connected', __( 'Not connected.', 'jot' ) );
+		}
+
+		$response = wp_remote_get(
+			$url,
+			array(
+				'headers' => array(
+					'Authorization' => 'Bearer ' . $token['access_token'],
+					'Accept'        => 'application/json',
+					'User-Agent'    => 'Jot/' . JOT_VERSION . '; ' . home_url(),
+				),
+				'timeout' => 15,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			$this->add_trace( $trace, 'GET', $url, 0, $response->get_error_message(), '' );
+			return $response;
+		}
+		$status = (int) wp_remote_retrieve_response_code( $response );
+		$body_excerpt = substr( (string) wp_remote_retrieve_body( $response ), 0, 500 );
+		$this->add_trace( $trace, 'GET', $url, $status, '', $body_excerpt );
+
+		if ( $status < 200 || $status >= 300 ) {
+			return new WP_Error( 'jot_http_' . $status, (string) wp_remote_retrieve_body( $response ) );
+		}
+
+		$decoded = json_decode( (string) wp_remote_retrieve_body( $response ), true );
+		return is_array( $decoded ) ? $decoded : array();
+	}
+
+	private function add_trace( ?array &$trace, string $method, string $url, int $status, string $error, string $body_excerpt ): void {
+		if ( $trace === null ) {
+			return;
+		}
+		$trace['attempts'][] = array(
+			'method' => $method,
+			'url'    => $url,
+			'status' => $status,
+			'error'  => $error,
+			'body'   => $body_excerpt,
+		);
 	}
 }
