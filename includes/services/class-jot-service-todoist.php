@@ -192,7 +192,10 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 	}
 
 	/**
-	 * Accept either a flat array or a paginated `{ "results": [...] }` envelope.
+	 * Accept a flat array or any of Todoist's v1 list envelopes. Different v1
+	 * endpoints picked different keys: /projects returns `{"results":[...]}`,
+	 * /tasks/completed returns `{"items":[...]}`. If neither is present, treat
+	 * the response itself as the list.
 	 *
 	 * @param mixed $response
 	 * @return array<int, mixed>
@@ -201,8 +204,10 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 		if ( ! is_array( $response ) ) {
 			return array();
 		}
-		if ( isset( $response['results'] ) && is_array( $response['results'] ) ) {
-			return $response['results'];
+		foreach ( array( 'results', 'items' ) as $key ) {
+			if ( isset( $response[ $key ] ) && is_array( $response[ $key ] ) ) {
+				return $response[ $key ];
+			}
 		}
 		return $response;
 	}
