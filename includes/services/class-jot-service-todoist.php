@@ -72,11 +72,10 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 	}
 
 	public function fetch_recent( int $since, int $user_id ): array {
-		// Todoist Sync API endpoints — including completed/get_all — require POST,
-		// not GET. A GET silently 4xx's, which our base authed_get converts to a
-		// WP_Error and we treat as "no events" → invisible service. Use a direct
-		// POST with the form-encoded body Todoist expects.
-		$response = $this->authed_post(
+		// Try the completed-tasks endpoint first. This is Premium-only; for Free
+		// accounts Todoist returns an error and we fall back to the user's active
+		// tasks (a different but still useful signal — "what's on your plate").
+		$completed = $this->authed_post(
 			'https://api.todoist.com/sync/v9/completed/get_all',
 			array(
 				'since' => gmdate( 'Y-m-d\TH:i:s', $since ),
@@ -84,10 +83,18 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 			),
 			$user_id
 		);
-		if ( is_wp_error( $response ) || ! is_array( $response ) || empty( $response['items'] ) || ! is_array( $response['items'] ) ) {
-			return array();
+		if ( is_array( $completed ) && ! empty( $completed['items'] ) && is_array( $completed['items'] ) ) {
+			return $this->shape_completed( $completed );
 		}
 
+		return $this->fetch_active( $user_id );
+	}
+
+	/**
+	 * @param array<string, mixed> $response
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function shape_completed( array $response ): array {
 		$projects = array();
 		if ( ! empty( $response['projects'] ) && is_array( $response['projects'] ) ) {
 			foreach ( $response['projects'] as $pid => $project ) {
@@ -98,7 +105,7 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 		}
 
 		$out = array();
-		foreach ( $response['items'] as $item ) {
+		foreach ( (array) $response['items'] as $item ) {
 			if ( ! is_array( $item ) || empty( $item['completed_at'] ) ) {
 				continue;
 			}
@@ -108,9 +115,49 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 			}
 			$project_id = isset( $item['project_id'] ) ? (string) $item['project_id'] : '';
 			$out[] = array(
+				'kind'    => 'completed',
 				'content' => (string) ( $item['content'] ?? '' ),
 				'project' => $projects[ $project_id ] ?? '',
 				'at'      => $completed_at,
+			);
+		}
+		return $out;
+	}
+
+	/**
+	 * Fallback for Free-tier accounts: list active tasks via REST v2. Returns
+	 * task snapshots with `kind=active` so the aggregator can switch wording.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function fetch_active( int $user_id ): array {
+		$tasks = $this->authed_get( 'https://api.todoist.com/rest/v2/tasks', $user_id );
+		if ( is_wp_error( $tasks ) || ! is_array( $tasks ) || empty( $tasks ) ) {
+			return array();
+		}
+
+		$projects_raw = $this->authed_get( 'https://api.todoist.com/rest/v2/projects', $user_id );
+		$projects     = array();
+		if ( is_array( $projects_raw ) ) {
+			foreach ( $projects_raw as $project ) {
+				if ( is_array( $project ) && ! empty( $project['id'] ) && ! empty( $project['name'] ) ) {
+					$projects[ (string) $project['id'] ] = (string) $project['name'];
+				}
+			}
+		}
+
+		$out = array();
+		foreach ( $tasks as $task ) {
+			if ( ! is_array( $task ) ) {
+				continue;
+			}
+			$created   = strtotime( (string) ( $task['created_at'] ?? '' ) );
+			$project_id = isset( $task['project_id'] ) ? (string) $task['project_id'] : '';
+			$out[] = array(
+				'kind'    => 'active',
+				'content' => (string) ( $task['content'] ?? '' ),
+				'project' => $projects[ $project_id ] ?? '',
+				'at'      => $created !== false ? $created : time(),
 			);
 		}
 		return $out;
