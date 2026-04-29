@@ -240,7 +240,7 @@ class Jot_Connections_Page {
 						$configured     = $is_credentials || ( ! empty( $apps[ $id ]['client_id'] ) && ! empty( $apps[ $id ]['client_secret'] ) );
 						$connected      = ! empty( $status['connected'] );
 						?>
-						<tr>
+						<tr data-jot-service="<?php echo esc_attr( $id ); ?>">
 							<td><strong><?php echo esc_html( $service->label() ); ?></strong></td>
 							<td>
 								<?php if ( $connected ) : ?>
@@ -280,6 +280,7 @@ class Jot_Connections_Page {
 									<a
 										class="button button-primary"
 										href="<?php echo esc_url( $connect_url ); ?>"
+										data-connecting-label="<?php esc_attr_e( 'Connecting…', 'jot' ); ?>"
 										<?php if ( ! $configured ) echo 'aria-disabled="true" style="pointer-events:none;opacity:.5"'; ?>
 									>
 										<?php esc_html_e( 'Connect', 'jot' ); ?>
