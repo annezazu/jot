@@ -80,7 +80,7 @@
 		const originalLabel = button.textContent;
 		const siblings = card.querySelectorAll( 'button' );
 		siblings.forEach( function ( b ) { b.disabled = true; } );
-		button.textContent = tier === 'full' ? __( 'Drafting…' ) : __( 'Creating…' );
+		button.textContent = __( 'Creating…' );
 
 		const body = { angle_key: angleKey };
 		if ( tier ) { body.tier = tier; }

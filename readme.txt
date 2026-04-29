@@ -12,7 +12,7 @@ A dashboard widget that surfaces post-idea suggestions drawn from your activity 
 
 == Description ==
 
-Jot adds a dashboard widget that suggests blog post angles based on your activity on services like GitHub, Mastodon, Bluesky, and Strava. Without AI it shows aggregated digests; with an AI provider connected through the WordPress 7.0 Connectors API it produces titled suggestion cards with three output tiers: quick spark, outline, or full draft.
+Jot adds a dashboard widget that suggests blog post angles based on your activity on services like GitHub, Mastodon, Bluesky, and Strava. Without AI it shows aggregated digests; with an AI provider connected through the WordPress 7.0 Connectors API it produces titled suggestion cards with two scaffold options: quick spark or outline. Jot deliberately does not generate finished posts — the writer fills in the page.
 
 Jot never auto-publishes. Every draft is a user-initiated click.
 

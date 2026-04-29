@@ -268,34 +268,6 @@ class Jot_Ai {
 			return rtrim( $out );
 		}
 
-		if ( $tier === Jot_Prompts::TIER_FULL ) {
-			$out = '';
-			$intro = trim( (string) ( $data['intro'] ?? '' ) );
-			if ( $intro !== '' ) {
-				foreach ( preg_split( "/\n{2,}/", $intro ) ?: array() as $para ) {
-					$out .= "<!-- wp:paragraph -->\n<p>" . wp_kses_post( $para ) . "</p>\n<!-- /wp:paragraph -->\n\n";
-				}
-			}
-			foreach ( (array) ( $data['sections'] ?? array() ) as $section ) {
-				$heading = wp_kses_post( (string) ( $section['heading'] ?? '' ) );
-				$body    = trim( (string) ( $section['body'] ?? '' ) );
-				$out    .= "<!-- wp:heading {\"level\":2} -->\n<h2>" . $heading . "</h2>\n<!-- /wp:heading -->\n\n";
-				foreach ( preg_split( "/\n{2,}/", $body ) ?: array() as $para ) {
-					if ( $para === '' ) {
-						continue;
-					}
-					$out .= "<!-- wp:paragraph -->\n<p>" . wp_kses_post( $para ) . "</p>\n<!-- /wp:paragraph -->\n\n";
-				}
-			}
-			$close = trim( (string) ( $data['close'] ?? '' ) );
-			if ( $close !== '' ) {
-				foreach ( preg_split( "/\n{2,}/", $close ) ?: array() as $para ) {
-					$out .= "<!-- wp:paragraph -->\n<p>" . wp_kses_post( $para ) . "</p>\n<!-- /wp:paragraph -->\n\n";
-				}
-			}
-			return rtrim( $out );
-		}
-
 		return '';
 	}
 }

@@ -17,7 +17,6 @@ class Jot_Prompts {
 
 	public const TIER_SPARK   = 'spark';
 	public const TIER_OUTLINE = 'outline';
-	public const TIER_FULL    = 'full';
 
 	/**
 	 * Prompt for generating 3–5 post-angle suggestion cards.
@@ -107,27 +106,6 @@ Return ONLY a JSON object:
 }
 OUTLINE,
 
-			self::TIER_FULL => $shared . <<<'FULL'
-Write a full first-draft blog post for this angle. Structure it as:
-- Short intro (1 short paragraph)
-- 3 to 5 body sections, each with a heading and 1 to 3 paragraphs
-- Short close (1 short paragraph)
-
-Match the writer's voice. Keep it honest and specific — draw on the source activity. Do not fabricate details.
-
-Return ONLY a JSON object:
-{
-  "title": "...",
-  "intro": "...",
-  "sections": [
-    { "heading": "...", "body": "..." },
-    ...
-  ],
-  "close": "..."
-}
-Each body string should be plain prose; paragraphs separated by two newlines. No markdown.
-FULL,
-
 			default => $shared,
 		};
 	}
@@ -164,26 +142,6 @@ FULL,
 					),
 				),
 				'required'   => array( 'title', 'sections' ),
-			),
-			self::TIER_FULL => array(
-				'type'       => 'object',
-				'properties' => array(
-					'title'    => array( 'type' => 'string' ),
-					'intro'    => array( 'type' => 'string' ),
-					'sections' => array(
-						'type'  => 'array',
-						'items' => array(
-							'type'       => 'object',
-							'properties' => array(
-								'heading' => array( 'type' => 'string' ),
-								'body'    => array( 'type' => 'string' ),
-							),
-							'required'   => array( 'heading', 'body' ),
-						),
-					),
-					'close'    => array( 'type' => 'string' ),
-				),
-				'required'   => array( 'title', 'intro', 'sections', 'close' ),
 			),
 			default => array( 'type' => 'object' ),
 		};
