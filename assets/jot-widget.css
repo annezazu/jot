@@ -3,22 +3,6 @@
  * Inherits core .postbox chrome; only styles internal structure.
  */
 
-.jot-widget__header {
-	display: flex;
-	justify-content: flex-end;
-	margin-bottom: 4px;
-}
-
-.jot-widget__settings {
-	color: #787c82;
-	text-decoration: none;
-}
-
-.jot-widget__settings:hover,
-.jot-widget__settings:focus {
-	color: #2271b1;
-}
-
 .jot-widget__section + .jot-widget__section {
 	margin-top: 16px;
 	padding-top: 12px;

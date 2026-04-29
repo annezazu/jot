@@ -83,8 +83,7 @@ class Jot_Cron {
 		if ( class_exists( 'Jot_Ai' ) && Jot_Ai::is_available() && ! empty( $digests ) ) {
 			$cards = Jot_Ai::generate_cards(
 				$digests,
-				self::recent_post_titles( $user_id ),
-				self::voice_hint()
+				self::recent_post_titles( $user_id )
 			);
 			if ( is_array( $cards ) ) {
 				$cards = self::filter_suppressed( $user_id, $cards );
@@ -125,12 +124,7 @@ class Jot_Cron {
 		return array_values( array_filter( array_map( 'get_the_title', $query->posts ) ) );
 	}
 
-	private static function voice_hint(): string {
-		$settings = get_option( 'jot_settings', array() );
-		return is_array( $settings ) && isset( $settings['voice_hint'] ) ? (string) $settings['voice_hint'] : '';
-	}
-
-	/**
+/**
 	 * Remove cards whose angle_key is on the acted-on list or currently dismissed.
 	 *
 	 * @param array<int, array<string, mixed>> $cards

@@ -37,7 +37,6 @@ class Jot_Dashboard_Widget {
 	public function render(): void {
 		$user_id         = get_current_user_id();
 		$connections     = jot_get_connected_services( $user_id );
-		$settings_url    = admin_url( 'admin.php?page=jot-settings' );
 		$connections_url = admin_url( 'admin.php?page=jot-connections' );
 		$last_refresh    = (int) get_user_meta( $user_id, Jot_Cron::USER_LAST_REFRESH, true );
 		$ai_available    = class_exists( 'Jot_Ai' ) && Jot_Ai::is_available();
@@ -52,16 +51,7 @@ class Jot_Dashboard_Widget {
 			data-rest-root="<?php echo esc_attr( esc_url_raw( rest_url( Jot_Rest_Controller::NAMESPACE . '/' ) ) ); ?>"
 			data-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>"
 		>
-			<div class="jot-widget__header">
-				<h3 id="jot-widget-heading" class="screen-reader-text"><?php esc_html_e( 'Jot suggestions', 'jot' ); ?></h3>
-				<a
-					class="jot-widget__settings"
-					href="<?php echo esc_url( $settings_url ); ?>"
-					aria-label="<?php esc_attr_e( 'Jot settings', 'jot' ); ?>"
-				>
-					<span class="dashicons dashicons-admin-generic" aria-hidden="true"></span>
-				</a>
-			</div>
+			<h3 id="jot-widget-heading" class="screen-reader-text"><?php esc_html_e( 'Jot suggestions', 'jot' ); ?></h3>
 
 			<section class="jot-widget__section jot-widget__suggestions" aria-live="polite">
 				<h4><?php esc_html_e( 'Suggestions', 'jot' ); ?></h4>

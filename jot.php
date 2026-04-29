@@ -63,7 +63,6 @@ function jot_activate(): void {
 		add_option(
 			'jot_settings',
 			array(
-				'voice_hint'       => '',
 				'dismiss_ttl_days' => 7,
 				'services'         => array(
 					'github'   => array( 'enabled' => false ),
@@ -126,9 +125,6 @@ function jot_register_admin_pages(): void {
 
 	$connections = new Jot_Connections_Page();
 	$connections->register();
-
-	$settings = new Jot_Settings_Page();
-	$settings->register();
 }
 
 /**
