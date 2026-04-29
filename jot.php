@@ -258,3 +258,26 @@ function jot_enqueue_widget_assets( string $hook ): void {
 		true
 	);
 }
+
+add_action( 'admin_enqueue_scripts', 'jot_enqueue_connect_ux_assets' );
+function jot_enqueue_connect_ux_assets( string $hook ): void {
+	$page = isset( $_GET['page'] ) ? sanitize_key( (string) wp_unslash( $_GET['page'] ) ) : '';
+	if ( $page !== Jot_Connections_Page::MENU_SLUG ) {
+		return;
+	}
+
+	wp_enqueue_style(
+		'jot-connect-ux',
+		JOT_PLUGIN_URL . 'assets/jot-connect-ux.css',
+		array(),
+		JOT_VERSION
+	);
+
+	wp_enqueue_script(
+		'jot-connect-ux',
+		JOT_PLUGIN_URL . 'assets/jot-connect-ux.js',
+		array(),
+		JOT_VERSION,
+		true
+	);
+}

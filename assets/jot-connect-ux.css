@@ -1,0 +1,28 @@
+/**
+ * Jot — Connect button feedback styles.
+ */
+@keyframes jot-row-flash {
+	0%   { background-color: #e7f4ec; }
+	100% { background-color: transparent; }
+}
+
+.jot-row-just-connected td {
+	animation: jot-row-flash 2.4s ease-out;
+}
+
+a.button[data-jot-connecting="1"]::after {
+	content: "";
+	display: inline-block;
+	margin-left: 8px;
+	width: 12px;
+	height: 12px;
+	border: 2px solid currentColor;
+	border-top-color: transparent;
+	border-radius: 50%;
+	animation: jot-spin 0.8s linear infinite;
+	vertical-align: -2px;
+}
+
+@keyframes jot-spin {
+	to { transform: rotate(360deg); }
+}
