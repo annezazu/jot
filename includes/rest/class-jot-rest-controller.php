@@ -151,7 +151,7 @@ class Jot_Rest_Controller {
 		$body  = '';
 		$used_tier = 'quick_draft';
 
-		if ( in_array( $tier, array( Jot_Prompts::TIER_SPARK, Jot_Prompts::TIER_OUTLINE, Jot_Prompts::TIER_FULL ), true )
+		if ( in_array( $tier, array( Jot_Prompts::TIER_SPARK, Jot_Prompts::TIER_OUTLINE ), true )
 			&& class_exists( 'Jot_Ai' ) && Jot_Ai::is_available() ) {
 
 			$settings = get_option( 'jot_settings', array() );

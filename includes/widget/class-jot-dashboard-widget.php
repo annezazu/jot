@@ -164,7 +164,7 @@ class Jot_Dashboard_Widget {
 			<?php
 		} elseif ( ! $ai_available ) {
 			?>
-			<p class="jot-widget__muted"><?php esc_html_e( 'Connect an AI provider for titled suggestions and full drafts.', 'jot' ); ?></p>
+			<p class="jot-widget__muted"><?php esc_html_e( 'Connect an AI provider for titled suggestions and outlines.', 'jot' ); ?></p>
 			<?php
 		}
 
@@ -216,8 +216,7 @@ class Jot_Dashboard_Widget {
 			<div class="jot-widget__card-actions">
 				<?php if ( $tier_buttons ) : ?>
 					<button type="button" class="button jot-widget__tier" data-tier="spark"><?php esc_html_e( 'Quick spark', 'jot' ); ?></button>
-					<button type="button" class="button jot-widget__tier" data-tier="outline"><?php esc_html_e( 'Outline', 'jot' ); ?></button>
-					<button type="button" class="button button-primary jot-widget__tier" data-tier="full"><?php esc_html_e( 'Full draft', 'jot' ); ?></button>
+					<button type="button" class="button button-primary jot-widget__tier" data-tier="outline"><?php esc_html_e( 'Outline', 'jot' ); ?></button>
 				<?php else : ?>
 					<button type="button" class="button button-primary jot-widget__quick-draft">
 						<?php esc_html_e( 'Quick draft', 'jot' ); ?>
@@ -333,7 +332,6 @@ class Jot_Dashboard_Widget {
 		return match ( $tier ) {
 			'spark'   => __( 'Spark', 'jot' ),
 			'outline' => __( 'Outline', 'jot' ),
-			'full'    => __( 'Full draft', 'jot' ),
 			default   => $tier,
 		};
 	}
