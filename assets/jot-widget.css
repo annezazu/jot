@@ -239,29 +239,6 @@
 	align-items: center;
 }
 
-.jot-widget__debug {
-	margin-top: 16px;
-	padding: 8px;
-	background: #fafafa;
-	border-radius: 3px;
-	font-size: 12px;
-}
-
-.jot-widget__debug summary {
-	cursor: pointer;
-	color: #50575e;
-}
-
-.jot-widget__debug-pre {
-	white-space: pre-wrap;
-	max-height: 200px;
-	overflow: auto;
-	font-size: 11px;
-	background: #f6f7f7;
-	padding: 8px;
-	margin-top: 6px;
-}
-
 .jot-status {
 	display: inline-block;
 	padding: 2px 8px;

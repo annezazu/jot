@@ -23,8 +23,6 @@ defined( 'ABSPATH' ) || exit;
 
 class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 
-	public const TRACE_META = 'jot_todoist_trace';
-
 	public function __construct() {
 		// Canonical hosts per the v1 docs; the bare todoist.com aliases redirect,
 		// but the redirect-on-POST behavior on the token exchange has been flaky.
@@ -74,8 +72,6 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 	}
 
 	public function fetch_recent( int $since, int $user_id ): array {
-		$trace = array( 'at' => time(), 'attempts' => array() );
-
 		// Try completed first (Premium accounts get a richer signal). Path is
 		// /api/v1/tasks/completed with `since` as ISO 8601. Falls through to
 		// the active-tasks list on any non-2xx or empty result.
@@ -86,31 +82,26 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 			),
 			'https://api.todoist.com/api/v1/tasks/completed'
 		);
-		$completed_raw = $this->traced_get( $completed_url, $user_id, $trace );
+		$completed_raw = $this->fetch_url( $completed_url, $user_id );
 		$completed     = is_wp_error( $completed_raw ) ? array() : self::unwrap_list( $completed_raw );
 
 		if ( ! empty( $completed ) ) {
-			$out = $this->shape_tasks( $completed, $this->fetch_projects( $user_id, $trace ), 'completed' );
-			update_user_meta( $user_id, self::TRACE_META, $trace );
-			return $out;
+			return $this->shape_tasks( $completed, $this->fetch_projects( $user_id ), 'completed' );
 		}
 
-		$active_raw = $this->traced_get( 'https://api.todoist.com/api/v1/tasks', $user_id, $trace );
+		$active_raw = $this->fetch_url( 'https://api.todoist.com/api/v1/tasks', $user_id );
 		$active     = is_wp_error( $active_raw ) ? array() : self::unwrap_list( $active_raw );
 		if ( empty( $active ) ) {
-			update_user_meta( $user_id, self::TRACE_META, $trace );
 			return array();
 		}
-		$out = $this->shape_tasks( $active, $this->fetch_projects( $user_id, $trace ), 'active' );
-		update_user_meta( $user_id, self::TRACE_META, $trace );
-		return $out;
+		return $this->shape_tasks( $active, $this->fetch_projects( $user_id ), 'active' );
 	}
 
 	/**
 	 * @return array<string, string> project_id => name
 	 */
-	private function fetch_projects( int $user_id, array &$trace ): array {
-		$raw      = $this->traced_get( 'https://api.todoist.com/api/v1/projects', $user_id, $trace );
+	private function fetch_projects( int $user_id ): array {
+		$raw      = $this->fetch_url( 'https://api.todoist.com/api/v1/projects', $user_id );
 		$projects = array();
 		if ( ! is_wp_error( $raw ) ) {
 			foreach ( self::unwrap_list( $raw ) as $project ) {
@@ -152,14 +143,13 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 	}
 
 	/**
-	 * GET wrapper that records the response into the trace ref.
+	 * Authenticated GET against a Todoist v1 endpoint.
 	 *
 	 * @return array<mixed>|WP_Error
 	 */
-	private function traced_get( string $url, int $user_id, array &$trace ) {
+	private function fetch_url( string $url, int $user_id ) {
 		$token = $this->get_token( $user_id );
 		if ( ! $token ) {
-			$this->add_trace( $trace, 'GET', $url, 0, 'not_connected', '' );
 			return new WP_Error( 'jot_not_connected', __( 'Not connected.', 'jot' ) );
 		}
 
@@ -176,12 +166,9 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 		);
 
 		if ( is_wp_error( $response ) ) {
-			$this->add_trace( $trace, 'GET', $url, 0, $response->get_error_message(), '' );
 			return $response;
 		}
 		$status = (int) wp_remote_retrieve_response_code( $response );
-		$body_excerpt = substr( (string) wp_remote_retrieve_body( $response ), 0, 500 );
-		$this->add_trace( $trace, 'GET', $url, $status, '', $body_excerpt );
 
 		if ( $status < 200 || $status >= 300 ) {
 			return new WP_Error( 'jot_http_' . $status, (string) wp_remote_retrieve_body( $response ) );
@@ -212,16 +199,4 @@ class Jot_Service_Todoist extends Jot_Service_OAuth2 {
 		return $response;
 	}
 
-	private function add_trace( ?array &$trace, string $method, string $url, int $status, string $error, string $body_excerpt ): void {
-		if ( $trace === null ) {
-			return;
-		}
-		$trace['attempts'][] = array(
-			'method' => $method,
-			'url'    => $url,
-			'status' => $status,
-			'error'  => $error,
-			'body'   => $body_excerpt,
-		);
-	}
 }
