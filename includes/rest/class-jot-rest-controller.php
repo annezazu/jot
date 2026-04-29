@@ -154,10 +154,7 @@ class Jot_Rest_Controller {
 		if ( in_array( $tier, array( Jot_Prompts::TIER_SPARK, Jot_Prompts::TIER_OUTLINE ), true )
 			&& class_exists( 'Jot_Ai' ) && Jot_Ai::is_available() ) {
 
-			$settings = get_option( 'jot_settings', array() );
-			$voice    = is_array( $settings ) && isset( $settings['voice_hint'] ) ? (string) $settings['voice_hint'] : '';
-
-			$result = Jot_Ai::generate_tier( $tier, $card, $voice );
+			$result = Jot_Ai::generate_tier( $tier, $card );
 			if ( is_wp_error( $result ) ) {
 				return new WP_REST_Response( array( 'ok' => false, 'error' => $result->get_error_message() ), 502 );
 			}

@@ -17,7 +17,6 @@ Until Phase 2 lands, no external APIs are called and no data leaves your site.
 - Plugin bootstrap (`jot.php`) with activation, deactivation, and uninstall lifecycle
 - Dashboard widget (`Jot_Dashboard_Widget`) gated on `edit_posts`
 - Connections admin page stub listing the four v1 services
-- Settings admin page with Settings-API-backed voice/style field
 - PSR-style autoloader for `Jot_*` classes across `includes/`
 - Internationalization-ready (`jot` text domain, all user-facing strings wrapped)
 

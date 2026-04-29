@@ -24,7 +24,7 @@ class Jot_Prompts {
 	 * @param array<int, array{label:string,digest:string}> $digests
 	 * @param array<int, string>                            $recent_titles
 	 */
-	public static function cards( array $digests, array $recent_titles, string $voice_hint ): string {
+	public static function cards( array $digests, array $recent_titles ): string {
 		$digest_lines = array();
 		$service_ids  = array();
 		foreach ( $digests as $d ) {
@@ -37,15 +37,11 @@ class Jot_Prompts {
 		$title_lines = array_slice( array_map( static fn ( string $t ): string => '- ' . $t, $recent_titles ), 0, 20 );
 		$titles_block = $title_lines ? implode( "\n", $title_lines ) : '(no recent posts)';
 
-		$voice = $voice_hint !== '' ? $voice_hint : '(none provided)';
-
 		return <<<PROMPT
-You suggest blog post angles to a writer based on their recent activity across connected services. You scaffold ideas; you do not write finished posts. Respect the writer's voice.
+You suggest blog post angles to a writer based on their recent activity across connected services. You scaffold ideas; you do not write finished posts.
 
 The writer's recent post titles (most recent first):
 {$titles_block}
-
-The writer's voice / style notes: {$voice}
 
 The writer's activity in the last week (each line is prefixed with its service ID in brackets):
 {$digest_block}
@@ -67,16 +63,13 @@ PROMPT;
 	/**
 	 * @param array{title:string, rationale:string, digest:string, service:string, label:string} $card
 	 */
-	public static function tier( string $tier, array $card, string $voice_hint ): string {
-		$voice = $voice_hint !== '' ? $voice_hint : '(none provided)';
-
+	public static function tier( string $tier, array $card ): string {
 		$shared = <<<SHARED
 You are helping a writer develop a blog post.
 
 Proposed angle: {$card['title']}
 Why this angle: {$card['rationale']}
 Source activity ({$card['label']}): {$card['digest']}
-Writer's voice / style: {$voice}
 
 SHARED;
 

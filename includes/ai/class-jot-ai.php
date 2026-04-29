@@ -31,7 +31,7 @@ class Jot_Ai {
 	 * @param array<int, string>                                                            $recent_titles
 	 * @return array<int, array{title:string,rationale:string,angle_key:string,service:string,label:string,digest:string}>|WP_Error
 	 */
-	public static function generate_cards( array $digests, array $recent_titles, string $voice_hint ) {
+	public static function generate_cards( array $digests, array $recent_titles ) {
 		if ( ! self::is_available() ) {
 			return new WP_Error( 'jot_ai_unavailable', __( 'No AI provider is configured.', 'jot' ) );
 		}
@@ -39,7 +39,7 @@ class Jot_Ai {
 			return array();
 		}
 
-		$prompt = Jot_Prompts::cards( $digests, $recent_titles, $voice_hint );
+		$prompt = Jot_Prompts::cards( $digests, $recent_titles );
 		// Intentionally simple: plain generate_text() works across all providers.
 		// Some providers (e.g. Gemini) don't advertise the structured-output
 		// capability that as_json_response() requires, causing "No models found"
@@ -180,12 +180,12 @@ class Jot_Ai {
 	 * @param array{title:string,rationale:string,digest:string,service:string,label:string} $card
 	 * @return array{title:string, body_blocks:string}|WP_Error
 	 */
-	public static function generate_tier( string $tier, array $card, string $voice_hint ) {
+	public static function generate_tier( string $tier, array $card ) {
 		if ( ! self::is_available() ) {
 			return new WP_Error( 'jot_ai_unavailable', __( 'No AI provider is configured.', 'jot' ) );
 		}
 
-		$prompt = Jot_Prompts::tier( $tier, $card, $voice_hint );
+		$prompt = Jot_Prompts::tier( $tier, $card );
 		$raw    = wp_ai_client_prompt( $prompt )->generate_text();
 
 		if ( is_wp_error( $raw ) ) {
