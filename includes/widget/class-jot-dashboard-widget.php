@@ -100,8 +100,6 @@ class Jot_Dashboard_Widget {
 				<?php endif; ?>
 			</section>
 
-			<?php $this->render_debug_panel( $user_id ); ?>
-
 			<footer class="jot-widget__footer">
 				<span class="jot-widget__muted jot-widget__refreshed"
 					<?php if ( $last_refresh > 0 ) : ?>
@@ -225,78 +223,6 @@ class Jot_Dashboard_Widget {
 			</div>
 			<p class="jot-widget__card-error" role="alert" hidden></p>
 		</li>
-		<?php
-	}
-
-	private function render_debug_panel( int $user_id ): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return;
-		}
-		$debug         = class_exists( 'Jot_Ai' ) ? jot_get_user_array( $user_id, Jot_Ai::DEBUG_META ) : array();
-		$digests       = jot_get_user_array( $user_id, Jot_Cron::USER_DIGESTS_META );
-		$todoist_trace = class_exists( 'Jot_Service_Todoist' ) ? jot_get_user_array( $user_id, Jot_Service_Todoist::TRACE_META ) : array();
-		if ( empty( $debug ) && empty( $digests ) && empty( $todoist_trace ) ) {
-			return;
-		}
-		?>
-		<details class="jot-widget__debug">
-			<summary><?php esc_html_e( 'Jot debug (admin only)', 'jot' ); ?></summary>
-
-			<?php if ( ! empty( $todoist_trace['attempts'] ) ) : ?>
-				<p class="jot-widget__muted"><strong><?php esc_html_e( 'Todoist fetch attempts:', 'jot' ); ?></strong></p>
-				<ul class="jot-widget__debug-digests">
-					<?php foreach ( (array) $todoist_trace['attempts'] as $attempt ) : ?>
-						<li>
-							<code><?php echo esc_html( (string) ( $attempt['method'] ?? '' ) . ' ' . (string) ( $attempt['status'] ?? '' ) ); ?></code>
-							<?php echo esc_html( (string) ( $attempt['url'] ?? '' ) ); ?>
-							<?php if ( ! empty( $attempt['error'] ) ) : ?>
-								— <em><?php echo esc_html( (string) $attempt['error'] ); ?></em>
-							<?php endif; ?>
-							<?php if ( ! empty( $attempt['body'] ) ) : ?>
-								<pre class="jot-widget__debug-pre"><?php echo esc_html( (string) $attempt['body'] ); ?></pre>
-							<?php endif; ?>
-						</li>
-					<?php endforeach; ?>
-				</ul>
-			<?php endif; ?>
-
-			<?php if ( ! empty( $digests ) ) : ?>
-				<p class="jot-widget__muted">
-					<strong><?php esc_html_e( 'Digests sent to AI:', 'jot' ); ?></strong>
-					<?php
-					$ids = array_map( static fn ( array $d ): string => (string) ( $d['service'] ?? '' ), $digests );
-					echo esc_html( implode( ', ', array_filter( $ids ) ) );
-					?>
-				</p>
-				<ul class="jot-widget__debug-digests">
-					<?php foreach ( $digests as $digest ) : ?>
-						<li>
-							<code><?php echo esc_html( (string) ( $digest['service'] ?? '?' ) ); ?></code>
-							— <?php echo esc_html( (string) ( $digest['digest'] ?? '' ) ); ?>
-						</li>
-					<?php endforeach; ?>
-				</ul>
-			<?php else : ?>
-				<p class="jot-widget__muted">
-					<strong><?php esc_html_e( 'No digests stored.', 'jot' ); ?></strong>
-					<?php esc_html_e( 'Either no services are connected, or every connected service returned zero events for the current window.', 'jot' ); ?>
-				</p>
-			<?php endif; ?>
-
-			<?php if ( ! empty( $debug ) ) : ?>
-				<p class="jot-widget__muted">
-					<?php if ( ! empty( $debug['error'] ) ) : ?>
-						<strong><?php esc_html_e( 'AI error:', 'jot' ); ?></strong>
-						<?php echo esc_html( (string) $debug['error'] ); ?>
-					<?php else : ?>
-						<strong><?php esc_html_e( 'Last raw AI response:', 'jot' ); ?></strong>
-					<?php endif; ?>
-				</p>
-				<?php if ( ! empty( $debug['raw'] ) ) : ?>
-					<pre class="jot-widget__debug-pre"><?php echo esc_html( (string) $debug['raw'] ); ?></pre>
-				<?php endif; ?>
-			<?php endif; ?>
-		</details>
 		<?php
 	}
 

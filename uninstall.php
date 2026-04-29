@@ -26,6 +26,7 @@ $user_meta_keys = array(
 	'jot_last_refresh',
 	'jot_last_ai_error',
 	'jot_ai_last_debug',
+	'jot_todoist_trace',
 	'jot_user_acted_on',
 	'jot_user_dismissed',
 	'jot_oauth_tokens_github',

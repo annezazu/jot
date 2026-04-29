@@ -31,8 +31,6 @@ class Jot_Ai {
 	 * @param array<int, string>                                                            $recent_titles
 	 * @return array<int, array{title:string,rationale:string,angle_key:string,service:string,label:string,digest:string}>|WP_Error
 	 */
-	public const DEBUG_META = 'jot_ai_last_debug';
-
 	public static function generate_cards( array $digests, array $recent_titles, string $voice_hint ) {
 		if ( ! self::is_available() ) {
 			return new WP_Error( 'jot_ai_unavailable', __( 'No AI provider is configured.', 'jot' ) );
@@ -47,15 +45,6 @@ class Jot_Ai {
 		// capability that as_json_response() requires, causing "No models found"
 		// errors. We ask for JSON in the prompt and parse it ourselves.
 		$raw = wp_ai_client_prompt( $prompt )->generate_text();
-
-		self::record_debug(
-			array(
-				'at'    => time(),
-				'stage' => 'cards',
-				'error' => is_wp_error( $raw ) ? $raw->get_error_message() : '',
-				'raw'   => is_wp_error( $raw ) ? '' : substr( (string) $raw, 0, 2000 ),
-			)
-		);
 
 		if ( is_wp_error( $raw ) ) {
 			return $raw;
@@ -186,27 +175,6 @@ class Jot_Ai {
 	}
 
 	/**
-	 * @param array<string, mixed> $debug
-	 */
-	private static function record_debug( array $debug ): void {
-		$user_id = get_current_user_id();
-		if ( $user_id === 0 ) {
-			// Cron runs with no user. Stash on the first user that has connections
-			// — debug is admin-only, so this is fine.
-			global $wpdb;
-			$row = $wpdb->get_row(
-				"SELECT user_id FROM {$wpdb->usermeta} WHERE meta_key LIKE 'jot_oauth_tokens_%' LIMIT 1",
-				ARRAY_A
-			);
-			$user_id = isset( $row['user_id'] ) ? (int) $row['user_id'] : 0;
-		}
-		if ( $user_id === 0 ) {
-			return;
-		}
-		update_user_meta( $user_id, self::DEBUG_META, $debug );
-	}
-
-	/**
 	 * Generate the tier-specific output for one card.
 	 *
 	 * @param array{title:string,rationale:string,digest:string,service:string,label:string} $card
@@ -219,15 +187,6 @@ class Jot_Ai {
 
 		$prompt = Jot_Prompts::tier( $tier, $card, $voice_hint );
 		$raw    = wp_ai_client_prompt( $prompt )->generate_text();
-
-		self::record_debug(
-			array(
-				'at'    => time(),
-				'stage' => 'tier:' . $tier,
-				'error' => is_wp_error( $raw ) ? $raw->get_error_message() : '',
-				'raw'   => is_wp_error( $raw ) ? '' : substr( (string) $raw, 0, 2000 ),
-			)
-		);
 
 		if ( is_wp_error( $raw ) ) {
 			return $raw;
