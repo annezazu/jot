@@ -187,6 +187,7 @@ class Jot_Dashboard_Widget {
 				type="button"
 				class="jot-widget__dismiss"
 				aria-label="<?php echo esc_attr( sprintf( /* translators: %s: card title */ __( 'Dismiss: %s', 'jot' ), $title !== '' ? $title : $badge_aria ) ); ?>"
+				title="<?php esc_attr_e( 'Ignore suggestion', 'jot' ); ?>"
 			>×</button>
 			<div class="jot-widget__card-title">
 				<?php if ( ! empty( $badge_list ) ) : ?>
