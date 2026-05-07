@@ -258,12 +258,12 @@ class Jot_Dashboard_Widget {
 			<span
 				class="jot-widget__ai-toggle-caption"
 				data-on="<?php esc_attr_e( 'AI labels your activity and writes Spark and Outline drafts.', 'jot' ); ?>"
-				data-off="<?php esc_attr_e( 'Raw activity only — Quick draft uses the digest as-is.', 'jot' ); ?>"
+				data-off="<?php esc_attr_e( 'Your activity stays as it is — Quick draft turns any card into a starter post.', 'jot' ); ?>"
 			><?php
 				echo esc_html(
 					$on
 						? __( 'AI labels your activity and writes Spark and Outline drafts.', 'jot' )
-						: __( 'Raw activity only — Quick draft uses the digest as-is.', 'jot' )
+						: __( 'Your activity stays as it is — Quick draft turns any card into a starter post.', 'jot' )
 				);
 			?></span>
 		</div>
