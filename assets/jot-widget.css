@@ -3,6 +3,133 @@
  * Inherits core .postbox chrome; only styles internal structure.
  */
 
+/*
+ * "Enhance with AI" toggle — visual replica of @wordpress/components
+ * ToggleControl. Same markup pattern as the Habit Creator and Draft
+ * Sweeper widgets so the three feel like one feature across plugins.
+ */
+.jot-widget__ai-toggle {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 4px 8px;
+	margin: 0 0 12px;
+	padding: 0 0 10px;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.jot-widget__ai-toggle-form-toggle {
+	position: relative;
+	display: inline-block;
+	width: 36px;
+	height: 18px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	cursor: pointer;
+	flex: 0 0 auto;
+	border-radius: 9px;
+}
+
+.jot-widget__ai-toggle-form-toggle:focus-visible {
+	outline: 2px solid var( --wp-admin-theme-color, #2271b1 );
+	outline-offset: 2px;
+}
+
+.jot-widget__ai-toggle-form-toggle .components-form-toggle__track {
+	position: absolute;
+	inset: 0;
+	width: 36px;
+	height: 18px;
+	border-radius: 9px;
+	background: #757575;
+	transition: background 0.1s ease;
+}
+
+.jot-widget__ai-toggle-form-toggle.is-checked .components-form-toggle__track {
+	background: var( --wp-admin-theme-color, #2271b1 );
+}
+
+.jot-widget__ai-toggle-form-toggle .components-form-toggle__thumb {
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 1px 1px rgba( 0, 0, 0, 0.15 );
+	transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+.jot-widget__ai-toggle-form-toggle.is-checked .components-form-toggle__thumb {
+	transform: translateX( 18px );
+}
+
+.jot-widget__ai-toggle-spinner {
+	position: absolute;
+	top: 5px;
+	left: 5px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	border: 1.5px solid rgba( 0, 0, 0, 0.2 );
+	border-top-color: var( --wp-admin-theme-color, #2271b1 );
+	opacity: 0;
+	transition: opacity 0.1s ease, transform 0.1s ease;
+}
+
+.jot-widget__ai-toggle-form-toggle.is-checked .jot-widget__ai-toggle-spinner {
+	transform: translateX( 18px );
+	border-color: rgba( 255, 255, 255, 0.5 );
+	border-top-color: #fff;
+}
+
+.jot-widget__ai-toggle-form-toggle.is-saving .jot-widget__ai-toggle-spinner {
+	opacity: 1;
+	animation: jot-ai-spin 0.6s linear infinite;
+}
+
+.jot-widget__ai-toggle-form-toggle.is-saving .components-form-toggle__thumb {
+	opacity: 0;
+}
+
+.jot-widget__ai-toggle-form-toggle.is-saving .components-form-toggle__track {
+	animation: jot-ai-pulse 0.9s ease-in-out infinite;
+}
+
+.jot-widget__ai-toggle-form-toggle.is-checked.is-saving .jot-widget__ai-toggle-spinner {
+	animation-name: jot-ai-spin-checked;
+}
+
+@keyframes jot-ai-spin {
+	to { transform: translateX( 0 ) rotate( 360deg ); }
+}
+
+@keyframes jot-ai-spin-checked {
+	from { transform: translateX( 18px ) rotate( 0deg ); }
+	to   { transform: translateX( 18px ) rotate( 360deg ); }
+}
+
+@keyframes jot-ai-pulse {
+	0%, 100% { opacity: 1; }
+	50%      { opacity: 0.55; }
+}
+
+.jot-widget__ai-toggle-label {
+	font-size: 13px;
+	color: #1d2327;
+	cursor: pointer;
+	user-select: none;
+}
+
+.jot-widget__ai-toggle-caption {
+	flex: 1 0 100%;
+	margin-left: 44px;
+	font-size: 12px;
+	color: #757575;
+}
+
 .jot-widget__section + .jot-widget__section {
 	margin-top: 16px;
 	padding-top: 12px;

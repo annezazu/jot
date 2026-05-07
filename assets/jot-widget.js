@@ -43,6 +43,16 @@
 		const t = event.target;
 		if ( ! ( t instanceof HTMLElement ) ) { return; }
 
+		const toggleBtn = t.closest( '.jot-widget__ai-toggle-form-toggle' )
+			|| ( t.classList.contains( 'jot-widget__ai-toggle-label' )
+				? t.parentElement.querySelector( '.jot-widget__ai-toggle-form-toggle' )
+				: null );
+		if ( toggleBtn ) {
+			event.preventDefault();
+			handleAiToggle( toggleBtn );
+			return;
+		}
+
 		if ( t.classList.contains( 'jot-widget__quick-draft' ) ) {
 			event.preventDefault();
 			handleQuickDraft( t, '' );
@@ -56,6 +66,51 @@
 			event.preventDefault();
 			handleRefresh( t );
 		}
+	}
+
+	function handleAiToggle( btn ) {
+		const next     = btn.getAttribute( 'aria-checked' ) !== 'true';
+		const wrap     = btn.closest( '.jot-widget__ai-toggle' );
+		const caption  = wrap ? wrap.querySelector( '.jot-widget__ai-toggle-caption' ) : null;
+
+		// Optimistic flip.
+		btn.classList.toggle( 'is-checked', next );
+		btn.setAttribute( 'aria-checked', next ? 'true' : 'false' );
+		btn.classList.add( 'is-saving' );
+		if ( caption ) {
+			caption.textContent = next
+				? caption.dataset.on
+				: caption.dataset.off;
+		}
+
+		const revert = function () {
+			btn.classList.remove( 'is-saving' );
+			btn.classList.toggle( 'is-checked', ! next );
+			btn.setAttribute( 'aria-checked', next ? 'false' : 'true' );
+			if ( caption ) {
+				caption.textContent = next
+					? caption.dataset.off
+					: caption.dataset.on;
+			}
+		};
+
+		request( 'POST', 'ai-toggle', { enabled: next } ).then( function ( res ) {
+			if ( res.status !== 200 || ! res.data || ! res.data.ok ) {
+				revert();
+				return;
+			}
+			// Re-render so suggestion-card actions reflect the new mode
+			// (tier buttons when AI is on; Quick draft when off).
+			return request( 'GET', 'render' ).then( function ( renderRes ) {
+				if ( renderRes.status === 200 && renderRes.data && renderRes.data.html ) {
+					replaceWidget( renderRes.data.html );
+				} else {
+					btn.classList.remove( 'is-saving' );
+				}
+			} );
+		} ).catch( function () {
+			revert();
+		} );
 	}
 
 	function cardError( card, message ) {

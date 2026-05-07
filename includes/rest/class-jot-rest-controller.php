@@ -72,6 +72,22 @@ class Jot_Rest_Controller {
 
 		register_rest_route(
 			self::NAMESPACE,
+			'/ai-toggle',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( __CLASS__, 'ai_toggle' ),
+				'permission_callback' => array( __CLASS__, 'can_use' ),
+				'args'                => array(
+					'enabled' => array(
+						'required' => true,
+						'type'     => 'boolean',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::NAMESPACE,
 			'/render',
 			array(
 				'methods'             => 'GET',
@@ -203,6 +219,13 @@ class Jot_Rest_Controller {
 			),
 			201
 		);
+	}
+
+	public static function ai_toggle( WP_REST_Request $request ): WP_REST_Response {
+		$enabled = (bool) $request->get_param( 'enabled' );
+		$user_id = get_current_user_id();
+		update_user_meta( $user_id, JOT_USER_AI_ENABLED_META, $enabled ? '1' : '0' );
+		return new WP_REST_Response( array( 'ok' => true, 'enabled' => $enabled ), 200 );
 	}
 
 	public static function dismiss( WP_REST_Request $request ): WP_REST_Response {

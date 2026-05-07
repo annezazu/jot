@@ -80,7 +80,7 @@ class Jot_Cron {
 
 		update_user_meta( $user_id, self::USER_DIGESTS_META, $digests );
 
-		if ( class_exists( 'Jot_Ai' ) && Jot_Ai::is_available() && ! empty( $digests ) ) {
+		if ( class_exists( 'Jot_Ai' ) && Jot_Ai::is_available( $user_id ) && ! empty( $digests ) ) {
 			$cards = Jot_Ai::generate_cards(
 				$digests,
 				self::recent_post_titles( $user_id )
