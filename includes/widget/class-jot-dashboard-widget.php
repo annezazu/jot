@@ -53,6 +53,8 @@ class Jot_Dashboard_Widget {
 		>
 			<h3 id="jot-widget-heading" class="screen-reader-text"><?php esc_html_e( 'Jot suggestions', 'jot' ); ?></h3>
 
+			<?php $this->render_ai_toggle( $user_id ); ?>
+
 			<section class="jot-widget__section jot-widget__suggestions" aria-live="polite">
 				<h4><?php esc_html_e( 'Suggestions', 'jot' ); ?></h4>
 
@@ -214,6 +216,57 @@ class Jot_Dashboard_Widget {
 			</div>
 			<p class="jot-widget__card-error" role="alert" hidden></p>
 		</li>
+		<?php
+	}
+
+	/**
+	 * "Enhance with AI" toggle — only rendered when an `ai_provider`
+	 * connector is registered via the WP 7.0 Connectors API. Same markup
+	 * and class semantics as the Habit Creator and Draft Sweeper widgets
+	 * so the three feel like one feature across plugins. The
+	 * `?jot_force_toggle=1` query flag is a design-review escape hatch.
+	 */
+	private function render_ai_toggle( int $user_id ): void {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended — read-only UI flag.
+		$force = ! empty( $_GET['jot_force_toggle'] );
+		if ( ! jot_ai_provider_registered() && ! $force ) {
+			return;
+		}
+
+		$on = jot_ai_user_enabled( $user_id );
+		$classes = array( 'components-form-toggle', 'jot-widget__ai-toggle-form-toggle' );
+		if ( $on ) {
+			$classes[] = 'is-checked';
+		}
+		?>
+		<div class="jot-widget__ai-toggle">
+			<button
+				type="button"
+				class="<?php echo esc_attr( implode( ' ', $classes ) ); ?>"
+				role="switch"
+				aria-checked="<?php echo $on ? 'true' : 'false'; ?>"
+				aria-labelledby="jot-widget__ai-toggle-label"
+			>
+				<span class="components-form-toggle__track" aria-hidden="true"></span>
+				<span class="components-form-toggle__thumb" aria-hidden="true"></span>
+				<span class="jot-widget__ai-toggle-spinner" aria-hidden="true"></span>
+			</button>
+			<label
+				id="jot-widget__ai-toggle-label"
+				class="jot-widget__ai-toggle-label"
+			><?php esc_html_e( 'Enhance with AI', 'jot' ); ?></label>
+			<span
+				class="jot-widget__ai-toggle-caption"
+				data-on="<?php esc_attr_e( 'AI labels your activity and writes Spark and Outline drafts.', 'jot' ); ?>"
+				data-off="<?php esc_attr_e( 'Your activity stays as it is — Quick draft turns any card into a starter post.', 'jot' ); ?>"
+			><?php
+				echo esc_html(
+					$on
+						? __( 'AI labels your activity and writes Spark and Outline drafts.', 'jot' )
+						: __( 'Your activity stays as it is — Quick draft turns any card into a starter post.', 'jot' )
+				);
+			?></span>
+		</div>
 		<?php
 	}
 

@@ -3,7 +3,7 @@
  * Plugin Name:       Jot
  * Plugin URI:        https://github.com/annemccarthy/jot
  * Description:       A dashboard widget that surfaces post-idea suggestions drawn from your activity on connected services. Works without AI; becomes more useful with an AI provider connected.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 7.0
  * Requires PHP:      8.1
  * Author:            Anne McCarthy
@@ -19,7 +19,7 @@ declare( strict_types=1 );
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'JOT_VERSION', '0.1.0' );
+define( 'JOT_VERSION', '0.2.0' );
 define( 'JOT_PLUGIN_FILE', __FILE__ );
 define( 'JOT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'JOT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -190,7 +190,7 @@ function jot_get_connected_services( ?int $user_id = null ): array {
 /**
  * Is an AI provider configured via the WP 7.0 Connectors API?
  */
-function jot_ai_is_available(): bool {
+function jot_ai_provider_registered(): bool {
 	if ( ! function_exists( 'wp_get_connectors' ) ) {
 		return false;
 	}
@@ -200,6 +200,34 @@ function jot_ai_is_available(): bool {
 		}
 	}
 	return false;
+}
+
+/**
+ * Per-user toggle for AI enhancement. Defaults to on. Surfaced to the user
+ * as the "Enhance with AI" switch in the dashboard widget header — only
+ * visible when an `ai_provider` connector is registered.
+ */
+const JOT_USER_AI_ENABLED_META = 'jot_ai_enabled';
+
+function jot_ai_user_enabled( ?int $user_id = null ): bool {
+	$user_id = $user_id ?? get_current_user_id();
+	if ( $user_id === 0 ) {
+		return true;
+	}
+	$stored = get_user_meta( $user_id, JOT_USER_AI_ENABLED_META, true );
+	// Default to enabled when meta is unset or empty.
+	if ( $stored === '' || $stored === false ) {
+		return true;
+	}
+	return (string) $stored === '1';
+}
+
+/**
+ * Connector present AND user has AI enabled. The previous helper name is
+ * kept as a thin alias so existing callsites keep working.
+ */
+function jot_ai_is_available(): bool {
+	return jot_ai_provider_registered() && jot_ai_user_enabled();
 }
 
 /**

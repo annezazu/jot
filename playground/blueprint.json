@@ -1,0 +1,15 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "preferredVersions": { "php": "8.3", "wp": "beta" },
+  "landingPage": "/wp-admin/index.php?jot_force_toggle=1",
+  "login": true,
+  "steps": [
+    {
+      "step": "installPlugin",
+      "pluginData": {
+        "resource": "url",
+        "url": "https://github-proxy.com/proxy/?repo=annezazu/jot&branch=add/enhance-with-ai-toggle"
+      }
+    }
+  ]
+}
