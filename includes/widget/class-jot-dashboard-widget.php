@@ -257,13 +257,13 @@ class Jot_Dashboard_Widget {
 			><?php esc_html_e( 'Enhance with AI', 'jot' ); ?></label>
 			<span
 				class="jot-widget__ai-toggle-caption"
-				data-on="<?php esc_attr_e( 'Generations use your connected AI.', 'jot' ); ?>"
-				data-off="<?php esc_attr_e( 'AI is off — prompt-only mode.', 'jot' ); ?>"
+				data-on="<?php esc_attr_e( 'AI labels your activity and writes Spark and Outline drafts.', 'jot' ); ?>"
+				data-off="<?php esc_attr_e( 'Raw activity only — Quick draft uses the digest as-is.', 'jot' ); ?>"
 			><?php
 				echo esc_html(
 					$on
-						? __( 'Generations use your connected AI.', 'jot' )
-						: __( 'AI is off — prompt-only mode.', 'jot' )
+						? __( 'AI labels your activity and writes Spark and Outline drafts.', 'jot' )
+						: __( 'Raw activity only — Quick draft uses the digest as-is.', 'jot' )
 				);
 			?></span>
 		</div>
