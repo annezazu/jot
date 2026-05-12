@@ -3,18 +3,48 @@
  * Inherits core .postbox chrome; only styles internal structure.
  */
 
+/* Zero the 11px top/bottom margin core puts on .postbox .inside so our
+   own section padding controls all the breathing room. Scoped to the Jot
+   postbox so other widgets aren't affected. */
+#jot_dashboard_widget .inside {
+	margin: 0;
+}
+
+/* Escape the .postbox .inside 12px padding on the sides and bottom so the
+   widget owns the full postbox interior. With this in place, every inner
+   block (sections, drafts panel, footer) can share the same 22px horizontal
+   padding and end up visually aligned. Same idiom Draft Sweeper uses. */
+.jot-widget {
+	margin: 0 -12px -12px;
+}
+
+.jot-widget__section {
+	padding: 24px 22px;
+}
+
+/* Drafts section: gray panel that spans the widget's full width, with
+   hairlines top and bottom, matching the Ideas Inbox and Draft Sweeper
+   widgets. */
+.jot-widget__section.jot-widget__drafts {
+	background: var( --wpds-color-bg-surface-neutral-weak, #f6f7f7 );
+	border-top: 1px solid var( --wpds-color-stroke-surface-neutral-weak, #dcdcde );
+	border-bottom: 1px solid var( --wpds-color-stroke-surface-neutral-weak, #dcdcde );
+}
+
 /*
  * "Enhance with AI" toggle — visual replica of @wordpress/components
  * ToggleControl. Same markup pattern as the Habit Creator and Draft
  * Sweeper widgets so the three feel like one feature across plugins.
+ * Picks up the 22px gutter the rest of the widget uses so the toggle
+ * row aligns with section content.
  */
 .jot-widget__ai-toggle {
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
 	gap: 4px 8px;
-	margin: 0 0 12px;
-	padding: 0 0 10px;
+	margin: 0;
+	padding: 12px 22px;
 	border-bottom: 1px solid #f0f0f1;
 }
 
@@ -130,13 +160,7 @@
 	color: #757575;
 }
 
-.jot-widget__section + .jot-widget__section {
-	margin-top: 16px;
-	padding-top: 12px;
-	border-top: 1px solid #f0f0f1;
-}
-
-.jot-widget__section h4 {
+.jot-widget__section h3 {
 	margin: 0 0 8px;
 	font-size: 14px;
 	font-weight: 600;
@@ -202,12 +226,15 @@
 }
 
 .jot-widget__card {
-	padding: 10px 12px;
-	border: 1px solid #f0f0f1;
-	border-radius: 4px;
+	padding: 10px 0;
 	margin-bottom: 8px;
 	position: relative;
 	transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.jot-widget__card:last-child {
+	margin-bottom: 0;
+	padding-bottom: 0;
 }
 
 .jot-widget__card--dismissing {
@@ -217,15 +244,17 @@
 }
 
 .jot-widget__card-title {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 12px;
 	margin-bottom: 6px;
-	padding-right: 22px; /* room for the dismiss × */
 }
 
 .jot-widget__card-badges {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 4px;
-	margin-bottom: 6px;
 }
 
 .jot-widget__card-badge {
@@ -239,7 +268,6 @@
 }
 
 .jot-widget__card-headline {
-	display: block;
 	line-height: 1.3;
 }
 
@@ -252,8 +280,28 @@
 
 .jot-widget__card-actions {
 	display: flex;
-	gap: 6px;
+	gap: 12px;
 	flex-wrap: wrap;
+	align-items: center;
+}
+
+.jot-widget__dismiss {
+	background: none;
+	border: 0;
+	padding: 0;
+	margin: 0;
+	box-shadow: none;
+	cursor: pointer;
+	font: inherit;
+	color: var( --wp-admin-theme-color, #2271b1 );
+	text-decoration: none;
+}
+
+.jot-widget__dismiss:hover,
+.jot-widget__dismiss:focus {
+	background: transparent;
+	color: var( --wp-admin-theme-color, #2271b1 );
+	text-decoration: underline;
 }
 
 .jot-widget__card-error {
@@ -263,32 +311,6 @@
 	background: #fbeaea;
 	border-radius: 3px;
 	font-size: 12px;
-}
-
-.jot-widget__card-success {
-	margin: 0;
-	color: #1d4d2e;
-	font-size: 13px;
-}
-
-.jot-widget__dismiss {
-	position: absolute;
-	top: 4px;
-	right: 6px;
-	background: transparent;
-	border: 0;
-	font-size: 18px;
-	line-height: 1;
-	padding: 2px 6px;
-	color: #787c82;
-	cursor: pointer;
-	border-radius: 3px;
-}
-
-.jot-widget__dismiss:hover,
-.jot-widget__dismiss:focus {
-	color: #1d2327;
-	background: #f0f0f1;
 }
 
 .jot-widget__drafts-list {
@@ -303,11 +325,25 @@
 	align-items: baseline;
 	gap: 8px;
 	padding: 4px 0;
-	border-bottom: 1px solid #f6f7f7;
 }
 
 .jot-widget__draft:last-child {
-	border-bottom: 0;
+	padding-bottom: 0;
+}
+
+/* Brief tinted flash on rows that were just promoted from a suggestion card,
+   so the user can see where the new draft landed in the list. */
+.jot-widget__draft--new {
+	animation: jot-draft-flash 1800ms ease-out;
+}
+
+@keyframes jot-draft-flash {
+	0%, 30% {
+		background-color: color-mix( in srgb, var( --wp-admin-theme-color, #2271b1 ) 18%, transparent );
+	}
+	100% {
+		background-color: transparent;
+	}
 }
 
 .jot-widget__draft-title {
@@ -341,12 +377,10 @@
 }
 
 .jot-widget__footer {
-	margin-top: 16px;
-	padding-top: 8px;
-	border-top: 1px solid #f0f0f1;
+	padding: 14px 22px;
 	font-size: 12px;
 	display: flex;
-	justify-content: space-between;
+	gap: 12px;
 	align-items: center;
 }
 

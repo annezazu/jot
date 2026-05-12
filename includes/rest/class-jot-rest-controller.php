@@ -215,6 +215,7 @@ class Jot_Rest_Controller {
 				'ok'       => true,
 				'post_id'  => (int) $post_id,
 				'tier'     => $used_tier,
+				'title'    => $title,
 				'edit_url' => get_edit_post_link( (int) $post_id, 'raw' ),
 			),
 			201
