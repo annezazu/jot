@@ -16,12 +16,9 @@ defined( 'ABSPATH' ) || exit;
 class Jot_Ai {
 
 	public static function is_available( ?int $user_id = null ): bool {
-		// Connectors API + wp-ai-client entry point + the user's per-user
-		// toggle (defaults to on). Pass an explicit user_id from cron / REST
-		// contexts where get_current_user_id() may be 0.
-		if ( ! function_exists( 'wp_ai_client_prompt' ) ) {
-			return false;
-		}
+		// Composite: a usable text-gen model in the registry AND the user's
+		// per-user toggle (defaults to on). Pass an explicit user_id from
+		// cron / REST contexts where get_current_user_id() may be 0.
 		return jot_ai_provider_registered() && jot_ai_user_enabled( $user_id );
 	}
 

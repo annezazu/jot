@@ -3,7 +3,7 @@
  * Plugin Name:       Jot
  * Plugin URI:        https://github.com/annemccarthy/jot
  * Description:       A dashboard widget that surfaces post-idea suggestions drawn from your activity on connected services. Works without AI; becomes more useful with an AI provider connected.
- * Version:           0.2.1
+ * Version:           0.2.2
  * Requires at least: 7.0
  * Requires PHP:      8.1
  * Author:            Anne McCarthy
@@ -19,7 +19,7 @@ declare( strict_types=1 );
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'JOT_VERSION', '0.2.1' );
+define( 'JOT_VERSION', '0.2.2' );
 define( 'JOT_PLUGIN_FILE', __FILE__ );
 define( 'JOT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'JOT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
@@ -188,18 +188,26 @@ function jot_get_connected_services( ?int $user_id = null ): array {
 }
 
 /**
- * Is an AI provider configured via the WP 7.0 Connectors API?
+ * Is there an AI provider that can actually generate text right now?
+ *
+ * wp_get_connectors() reports providers that are *registered* — not ones that
+ * have credentials wired up. Probing the wp-ai-client registry directly is the
+ * only check that catches "registered but no API key" and matches the model
+ * lookup that generate_text() will perform at click time. Cached per request
+ * since the widget calls this on every dashboard render and on every REST hit.
  */
 function jot_ai_provider_registered(): bool {
-	if ( ! function_exists( 'wp_get_connectors' ) ) {
-		return false;
+	static $cached = null;
+	if ( $cached !== null ) {
+		return $cached;
 	}
-	foreach ( (array) wp_get_connectors() as $connector ) {
-		if ( ( $connector['type'] ?? '' ) === 'ai_provider' ) {
-			return true;
-		}
+	if ( ! function_exists( 'wp_ai_client_prompt' ) || ! function_exists( 'wp_supports_ai' ) ) {
+		return $cached = false;
 	}
-	return false;
+	if ( ! wp_supports_ai() ) {
+		return $cached = false;
+	}
+	return $cached = wp_ai_client_prompt( 'probe' )->is_supported_for_text_generation();
 }
 
 /**

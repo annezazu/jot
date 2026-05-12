@@ -44,11 +44,9 @@ class Jot_Dashboard_Widget {
 		if ( empty( $connections ) ) {
 			?>
 			<div class="jot-widget jot-widget--empty"
-				aria-labelledby="jot-widget-heading"
 				data-rest-root="<?php echo esc_attr( esc_url_raw( rest_url( Jot_Rest_Controller::NAMESPACE . '/' ) ) ); ?>"
 				data-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>"
 			>
-				<h3 id="jot-widget-heading" class="screen-reader-text"><?php esc_html_e( 'Jot suggestions', 'jot' ); ?></h3>
 				<div class="jot-widget__empty">
 					<p><?php esc_html_e( 'Connect a service and Jot will suggest post ideas from your activity.', 'jot' ); ?></p>
 					<p>
@@ -71,22 +69,19 @@ class Jot_Dashboard_Widget {
 
 		?>
 		<div class="jot-widget"
-			aria-labelledby="jot-widget-heading"
 			data-rest-root="<?php echo esc_attr( esc_url_raw( rest_url( Jot_Rest_Controller::NAMESPACE . '/' ) ) ); ?>"
 			data-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>"
 		>
-			<h3 id="jot-widget-heading" class="screen-reader-text"><?php esc_html_e( 'Jot suggestions', 'jot' ); ?></h3>
-
 			<?php $this->render_ai_toggle( $user_id ); ?>
 
 			<section class="jot-widget__section jot-widget__suggestions" aria-live="polite">
-				<h4><?php esc_html_e( 'Suggestions', 'jot' ); ?></h4>
+				<h3><?php esc_html_e( 'Post suggestions from your connected accounts', 'jot' ); ?></h3>
 
 				<?php $this->render_suggestions( $user_id, $connections, $cards, $ai_available, $ai_error, $connections_url ); ?>
 			</section>
 
-			<section class="jot-widget__section jot-widget__drafts">
-				<h4><?php esc_html_e( 'Your drafts from Jot', 'jot' ); ?></h4>
+			<section class="jot-widget__section jot-widget__drafts" aria-live="polite">
+				<h3><?php esc_html_e( 'Your drafts from Jot', 'jot' ); ?></h3>
 				<?php if ( empty( $drafts ) ) : ?>
 					<p class="jot-widget__muted"><?php esc_html_e( 'Jot drafts appear here once you create them.', 'jot' ); ?></p>
 				<?php else : ?>
@@ -117,6 +112,9 @@ class Jot_Dashboard_Widget {
 			</section>
 
 			<footer class="jot-widget__footer">
+				<button type="button" class="button button-small jot-widget__refresh">
+					<?php esc_html_e( 'Refresh', 'jot' ); ?>
+				</button>
 				<span class="jot-widget__muted jot-widget__refreshed"
 					<?php if ( $last_refresh > 0 ) : ?>
 						title="<?php echo esc_attr( wp_date( 'c', $last_refresh ) ); ?>"
@@ -125,17 +123,12 @@ class Jot_Dashboard_Widget {
 					<?php
 					if ( $last_refresh > 0 ) {
 						/* translators: %s: human time diff e.g. "2 hours" */
-						printf( esc_html__( 'Refreshed %s ago', 'jot' ), esc_html( human_time_diff( $last_refresh, time() ) ) );
+						printf( esc_html__( 'Connections refreshed %s ago', 'jot' ), esc_html( human_time_diff( $last_refresh, time() ) ) );
 					} else {
-						esc_html_e( 'Not yet refreshed.', 'jot' );
+						esc_html_e( 'Connections not yet refreshed.', 'jot' );
 					}
 					?>
 				</span>
-				<?php if ( ! empty( $connections ) ) : ?>
-					<button type="button" class="button button-small jot-widget__refresh">
-						<?php esc_html_e( 'Refresh', 'jot' ); ?>
-					</button>
-				<?php endif; ?>
 			</footer>
 		</div>
 		<?php
@@ -192,25 +185,18 @@ class Jot_Dashboard_Widget {
 			$labels = array( (string) $card['label'] );
 		}
 		$badge_list = $this->badges_for( $labels );
-		$badge_aria = $labels ? implode( ', ', $labels ) : '';
 		?>
 		<li class="jot-widget__card" data-angle-key="<?php echo esc_attr( $angle_key ); ?>">
-			<button
-				type="button"
-				class="jot-widget__dismiss"
-				aria-label="<?php echo esc_attr( sprintf( /* translators: %s: card title */ __( 'Dismiss: %s', 'jot' ), $title !== '' ? $title : $badge_aria ) ); ?>"
-				title="<?php esc_attr_e( 'Ignore suggestion', 'jot' ); ?>"
-			>×</button>
 			<div class="jot-widget__card-title">
+				<?php if ( $title !== '' ) : ?>
+					<strong class="jot-widget__card-headline"><?php echo esc_html( $title ); ?></strong>
+				<?php endif; ?>
 				<?php if ( ! empty( $badge_list ) ) : ?>
 					<div class="jot-widget__card-badges">
 						<?php foreach ( $badge_list as $badge ) : ?>
 							<span class="jot-widget__card-badge"><?php echo esc_html( $badge ); ?></span>
 						<?php endforeach; ?>
 					</div>
-				<?php endif; ?>
-				<?php if ( $title !== '' ) : ?>
-					<strong class="jot-widget__card-headline"><?php echo esc_html( $title ); ?></strong>
 				<?php endif; ?>
 			</div>
 			<p class="jot-widget__card-digest"><?php echo esc_html( $body ); ?></p>
@@ -223,6 +209,9 @@ class Jot_Dashboard_Widget {
 						<?php esc_html_e( 'Quick draft', 'jot' ); ?>
 					</button>
 				<?php endif; ?>
+				<button type="button" class="jot-widget__dismiss">
+					<?php esc_html_e( 'Ignore suggestion', 'jot' ); ?>
+				</button>
 			</div>
 			<p class="jot-widget__card-error" role="alert" hidden></p>
 		</li>
