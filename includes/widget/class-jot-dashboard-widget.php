@@ -38,12 +38,36 @@ class Jot_Dashboard_Widget {
 		$user_id         = get_current_user_id();
 		$connections     = jot_get_connected_services( $user_id );
 		$connections_url = admin_url( 'admin.php?page=jot-connections' );
-		$last_refresh    = (int) get_user_meta( $user_id, Jot_Cron::USER_LAST_REFRESH, true );
-		$ai_available    = class_exists( 'Jot_Ai' ) && Jot_Ai::is_available();
-		$ai_error        = (string) get_user_meta( $user_id, Jot_Cron::USER_AI_ERROR_META, true );
 
-		$cards   = $this->build_card_list( $user_id );
-		$drafts  = $this->get_jot_drafts();
+		// No connections: render only the connect CTA. Drafts list and refresh
+		// footer are suppressed so the user has a single, unambiguous next step.
+		if ( empty( $connections ) ) {
+			?>
+			<div class="jot-widget jot-widget--empty"
+				aria-labelledby="jot-widget-heading"
+				data-rest-root="<?php echo esc_attr( esc_url_raw( rest_url( Jot_Rest_Controller::NAMESPACE . '/' ) ) ); ?>"
+				data-nonce="<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>"
+			>
+				<h3 id="jot-widget-heading" class="screen-reader-text"><?php esc_html_e( 'Jot suggestions', 'jot' ); ?></h3>
+				<div class="jot-widget__empty">
+					<p><?php esc_html_e( 'Connect a service and Jot will suggest post ideas from your activity.', 'jot' ); ?></p>
+					<p>
+						<a class="button button-primary" href="<?php echo esc_url( $connections_url ); ?>">
+							<?php esc_html_e( 'Connect a service', 'jot' ); ?>
+						</a>
+					</p>
+				</div>
+			</div>
+			<?php
+			return;
+		}
+
+		$last_refresh = (int) get_user_meta( $user_id, Jot_Cron::USER_LAST_REFRESH, true );
+		$ai_available = class_exists( 'Jot_Ai' ) && Jot_Ai::is_available();
+		$ai_error     = (string) get_user_meta( $user_id, Jot_Cron::USER_AI_ERROR_META, true );
+
+		$cards  = $this->build_card_list( $user_id );
+		$drafts = $this->get_jot_drafts();
 
 		?>
 		<div class="jot-widget"
@@ -122,20 +146,6 @@ class Jot_Dashboard_Widget {
 	 * @param array<int, array<string, mixed>>                      $cards
 	 */
 	private function render_suggestions( int $user_id, array $connections, array $cards, bool $ai_available, string $ai_error, string $connections_url ): void {
-		if ( empty( $connections ) ) {
-			?>
-			<div class="jot-widget__empty">
-				<p><?php esc_html_e( "Connect a service and Jot will suggest post ideas from your activity.", 'jot' ); ?></p>
-				<p>
-					<a class="button button-primary" href="<?php echo esc_url( $connections_url ); ?>">
-						<?php esc_html_e( 'Connect a service', 'jot' ); ?>
-					</a>
-				</p>
-			</div>
-			<?php
-			return;
-		}
-
 		if ( empty( $cards ) ) {
 			?>
 			<div class="jot-widget__empty">

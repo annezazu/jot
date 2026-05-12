@@ -3,7 +3,7 @@
  * Plugin Name:       Jot
  * Plugin URI:        https://github.com/annemccarthy/jot
  * Description:       A dashboard widget that surfaces post-idea suggestions drawn from your activity on connected services. Works without AI; becomes more useful with an AI provider connected.
- * Version:           0.2.0
+ * Version:           0.2.1
  * Requires at least: 7.0
  * Requires PHP:      8.1
  * Author:            Anne McCarthy
@@ -19,7 +19,7 @@ declare( strict_types=1 );
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'JOT_VERSION', '0.2.0' );
+define( 'JOT_VERSION', '0.2.1' );
 define( 'JOT_PLUGIN_FILE', __FILE__ );
 define( 'JOT_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'JOT_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
